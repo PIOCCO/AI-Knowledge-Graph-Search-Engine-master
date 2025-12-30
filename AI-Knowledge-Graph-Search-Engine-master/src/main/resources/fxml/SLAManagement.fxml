@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.geometry.Insets?>
+
+<VBox spacing="20" style="-fx-background-color: #f4f7f6;" xmlns:fx="http://javafx.com/fxml/1" fx:controller="org.example.controller.SLAController">
+    <padding>
+        <Insets top="20" right="20" bottom="20" left="20"/>
+    </padding>
+
+    <Label text="SLA &amp; Business Rules" style="-fx-font-size: 24; -fx-font-weight: bold;"/>
+
+    <HBox spacing="20" VBox.vgrow="ALWAYS">
+        <VBox spacing="10" prefWidth="300" style="-fx-background-color: white; -fx-padding: 15; -fx-background-radius: 10;">
+            <Label text="New SLA Policy" style="-fx-font-size: 16; -fx-font-weight: bold;"/>
+            <Separator/>
+            <Label text="Policy Name"/>
+            <TextField fx:id="nameField" promptText="e.g. Critical Priority Response"/>
+            <Label text="Ticket Priority"/>
+            <ComboBox fx:id="priorityCombo" maxWidth="Infinity"/>
+            <Label text="Response Time (Min)"/>
+            <Spinner fx:id="responseTimeSpinner" maxWidth="Infinity" editable="true"/>
+            <Label text="Resolution Time (Min)"/>
+            <Spinner fx:id="resolutionTimeSpinner" maxWidth="Infinity" editable="true"/>
+            <Region VBox.vgrow="ALWAYS"/>
+            <Button text="Save Policy" onAction="#handleCreateSLA" maxWidth="Infinity" style="-fx-background-color: #3498db; -fx-text-fill: white;"/>
+        </VBox>
+
+        <VBox spacing="10" HBox.hgrow="ALWAYS" style="-fx-background-color: white; -fx-padding: 15; -fx-background-radius: 10;">
+            <HBox alignment="CENTER_LEFT">
+                <Label text="SLA Policies" style="-fx-font-size: 16; -fx-font-weight: bold;"/>
+                <Region HBox.hgrow="ALWAYS"/>
+                <Button text="Remove" onAction="#handleDeleteSLA" style="-fx-background-color: #e74c3c; -fx-text-fill: white;"/>
+            </HBox>
+            <TableView fx:id="slaTable" VBox.vgrow="ALWAYS">
+                <columns>
+                    <TableColumn fx:id="colName" text="Policy Name" prefWidth="200"/>
+                    <TableColumn fx:id="colPriority" text="Priority" prefWidth="100"/>
+                    <TableColumn fx:id="colResponse" text="Resp. Time" prefWidth="120"/>
+                    <TableColumn fx:id="colResolution" text="Res. Time" prefWidth="120"/>
+                </columns>
+                <columnResizePolicy>
+                    <TableView fx:constant="CONSTRAINED_RESIZE_POLICY"/>
+                </columnResizePolicy>
+            </TableView>
+        </VBox>
+    </HBox>
+</VBox>

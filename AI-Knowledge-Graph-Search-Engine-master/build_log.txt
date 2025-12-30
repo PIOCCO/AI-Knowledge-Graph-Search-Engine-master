@@ -1,0 +1,23 @@
+[INFO] Scanning for projects...
+[INFO] 
+[INFO] -------------------< org.example:Ai_Ticket_Support >--------------------
+[INFO] Building Ai_Ticket_Support 1.0-SNAPSHOT
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[WARNING] 6 problems were encountered while building the effective model for org.openjfx:javafx-controls:jar:win:21.0.2 during dependency collection step for project (use -X to see details)
+[INFO] 
+[INFO] --- clean:3.2.0:clean (default-clean) @ Ai_Ticket_Support ---
+[INFO] Deleting C:\Users\Lenovo\Desktop\emsi\4iir\no sql big data\projet\AI-Knowledge-Graph-Search-Engine-master\AI-Knowledge-Graph-Search-Engine-master\target
+[INFO] 
+[INFO] --- resources:3.3.1:resources (default-resources) @ Ai_Ticket_Support ---
+[INFO] Copying 25 resources from src\main\resources to target\classes
+[INFO] 
+[INFO] --- compiler:3.13.0:compile (default-compile) @ Ai_Ticket_Support ---
+[INFO] Recompiling the module because of changed source code.
+[INFO] Compiling 63 source files with javac [debug target 17] to target\classes
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  10.366 s
+[INFO] Finished at: 2025-12-28T16:52:20+01:00
+[INFO] ------------------------------------------------------------------------

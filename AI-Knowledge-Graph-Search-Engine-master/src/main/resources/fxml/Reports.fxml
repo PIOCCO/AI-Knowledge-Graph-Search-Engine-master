@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.geometry.Insets?>
+
+<VBox spacing="20" style="-fx-background-color: #f4f7f6;" xmlns:fx="http://javafx.com/fxml/1" fx:controller="org.example.controller.ReportController">
+    <padding>
+        <Insets top="20" right="20" bottom="20" left="20"/>
+    </padding>
+
+    <Label text="Reporting Center" style="-fx-font-size: 24; -fx-font-weight: bold;"/>
+
+    <HBox spacing="15" alignment="CENTER_LEFT" style="-fx-background-color: white; -fx-padding: 15; -fx-background-radius: 10;">
+        <VBox spacing="5">
+            <Label text="Report Type"/>
+            <ComboBox fx:id="reportTypeCombo" prefWidth="250"/>
+        </VBox>
+        <VBox spacing="5">
+            <Label text="Start Date"/>
+            <DatePicker fx:id="startDatePicker"/>
+        </VBox>
+        <VBox spacing="5">
+            <Label text="End Date"/>
+            <DatePicker fx:id="endDatePicker"/>
+        </VBox>
+        <Region HBox.hgrow="ALWAYS"/>
+        <Button text="Generate Preview" onAction="#handleGeneratePreview" prefWidth="150" style="-fx-background-color: #3498db; -fx-text-fill: white;"/>
+    </HBox>
+
+    <VBox spacing="10" VBox.vgrow="ALWAYS" style="-fx-background-color: white; -fx-padding: 15; -fx-background-radius: 10;">
+        <HBox alignment="CENTER_LEFT">
+            <Label text="Report Preview" style="-fx-font-size: 16; -fx-font-weight: bold;"/>
+            <Region HBox.hgrow="ALWAYS"/>
+            <ProgressBar fx:id="generationProgress" prefWidth="200"/>
+        </HBox>
+        <TextArea fx:id="reportPreview" VBox.vgrow="ALWAYS" editable="false" style="-fx-font-family: 'Courier New'; -fx-font-size: 12;"/>
+    </VBox>
+
+    <HBox spacing="15" alignment="CENTER_RIGHT">
+        <Button text="Print Report" onAction="#handlePrint" style="-fx-background-color: #95a5a6; -fx-text-fill: white;"/>
+        <Button text="Export as CSV" onAction="#handleExportCSV" style="-fx-background-color: #27ae60; -fx-text-fill: white;"/>
+    </HBox>
+</VBox>

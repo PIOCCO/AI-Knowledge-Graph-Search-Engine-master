@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.chart.*?>
+<?import javafx.geometry.Insets?>
+
+<VBox spacing="20" style="-fx-background-color: #f4f7f6;" xmlns:fx="http://javafx.com/fxml/1" fx:controller="org.example.controller.AnalyticsController">
+    <padding>
+        <Insets top="20" right="20" bottom="20" left="20"/>
+    </padding>
+
+    <HBox spacing="20" alignment="CENTER_LEFT">
+        <Label text="System Analytics" style="-fx-font-size: 24; -fx-font-weight: bold;"/>
+        <Region HBox.hgrow="ALWAYS"/>
+        <ComboBox fx:id="timeRangeSelector" prefWidth="150"/>
+        <Button text="Refresh" onAction="#handleRefresh" style="-fx-background-color: #3498db; -fx-text-fill: white;"/>
+    </HBox>
+
+    <HBox spacing="20">
+        <VBox style="-fx-background-color: white; -fx-padding: 20; -fx-background-radius: 10;" HBox.hgrow="ALWAYS">
+            <Label text="Average Resolution Time" style="-fx-font-size: 14; -fx-text-fill: #7f8c8d;"/>
+            <Label fx:id="avgResolutionTimeLabel" text="0 Hours" style="-fx-font-size: 28; -fx-font-weight: bold;"/>
+        </VBox>
+        <VBox style="-fx-background-color: white; -fx-padding: 20; -fx-background-radius: 10;" HBox.hgrow="ALWAYS">
+            <Label text="System Health Score" style="-fx-font-size: 14; -fx-text-fill: #7f8c8d;"/>
+            <Label fx:id="systemHealthLabel" text="0%" style="-fx-font-size: 28; -fx-font-weight: bold;"/>
+        </VBox>
+    </HBox>
+
+    <GridPane hgap="20" vgap="20" VBox.vgrow="ALWAYS">
+        <columnConstraints>
+            <ColumnConstraints percentWidth="50"/>
+            <ColumnConstraints percentWidth="50"/>
+        </columnConstraints>
+        
+        <VBox style="-fx-background-color: white; -fx-padding: 15; -fx-background-radius: 10;" GridPane.columnIndex="0">
+            <Label text="Agent Performance (Resolution Rate)" style="-fx-font-size: 16; -fx-font-weight: bold;"/>
+            <BarChart fx:id="agentPerformanceChart" prefHeight="300">
+                <xAxis><CategoryAxis side="BOTTOM"/></xAxis>
+                <yAxis><NumberAxis side="LEFT"/></yAxis>
+            </BarChart>
+        </VBox>
+
+        <VBox style="-fx-background-color: white; -fx-padding: 15; -fx-background-radius: 10;" GridPane.columnIndex="1">
+            <Label text="SLA Compliance Trend" style="-fx-font-size: 16; -fx-font-weight: bold;"/>
+            <LineChart fx:id="slaComplianceTrendChart" prefHeight="300">
+                <xAxis><CategoryAxis side="BOTTOM"/></xAxis>
+                <yAxis><NumberAxis side="LEFT" label="Percentage"/></yAxis>
+            </LineChart>
+        </VBox>
+        
+        <VBox style="-fx-background-color: white; -fx-padding: 15; -fx-background-radius: 10;" GridPane.columnSpan="2" GridPane.rowIndex="1">
+            <Label text="Ticket Category Distribution" style="-fx-font-size: 16; -fx-font-weight: bold;"/>
+            <PieChart fx:id="categoryPieChart" prefHeight="300"/>
+        </VBox>
+    </GridPane>
+</VBox>

@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.geometry.Insets?>
+
+<VBox spacing="20" style="-fx-background-color: #f4f7f6;" xmlns:fx="http://javafx.com/fxml/1" fx:controller="org.example.controller.SettingsController">
+    <padding>
+        <Insets top="20" right="20" bottom="20" left="20"/>
+    </padding>
+
+    <Label text="Application Settings" style="-fx-font-size: 24; -fx-font-weight: bold;"/>
+
+    <VBox spacing="25" maxWidth="600" style="-fx-background-color: white; -fx-padding: 30; -fx-background-radius: 10;">
+        <VBox spacing="10">
+            <Label text="General Preferences" style="-fx-font-size: 18; -fx-font-weight: bold;"/>
+            <Separator/>
+            
+            <HBox spacing="20" alignment="CENTER_LEFT">
+                <Label text="Application Name" prefWidth="150"/>
+                <TextField fx:id="appNameField" HBox.hgrow="ALWAYS"/>
+            </HBox>
+            
+            <HBox spacing="20" alignment="CENTER_LEFT">
+                <Label text="UI Theme" prefWidth="150"/>
+                <ComboBox fx:id="themeSelector" maxWidth="Infinity" HBox.hgrow="ALWAYS"/>
+            </HBox>
+        </VBox>
+
+        <VBox spacing="10">
+            <Label text="Notifications &amp; Security" style="-fx-font-size: 18; -fx-font-weight: bold;"/>
+            <Separator/>
+            
+            <CheckBox fx:id="emailNotifyToggle" text="Enable Email Notifications" selected="true"/>
+            
+            <VBox spacing="5">
+                <HBox alignment="CENTER_LEFT">
+                    <Label text="Session Timeout" prefWidth="150"/>
+                    <Region HBox.hgrow="ALWAYS"/>
+                    <Label fx:id="sessionTimeLabel" text="60 min"/>
+                </HBox>
+                <Slider fx:id="sessionTimeSlider" min="5" max="480" value="60" showTickMarks="true" showTickLabels="true"/>
+            </VBox>
+        </VBox>
+
+        <HBox spacing="15" alignment="CENTER_RIGHT">
+            <Button text="Reset to Defaults" onAction="#handleReset" style="-fx-background-color: #95a5a6; -fx-text-fill: white;"/>
+            <Button text="Save Changes" onAction="#handleSave" prefWidth="150" style="-fx-background-color: #3498db; -fx-text-fill: white;"/>
+        </HBox>
+    </VBox>
+</VBox>
