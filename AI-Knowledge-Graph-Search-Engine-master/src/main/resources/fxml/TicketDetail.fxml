@@ -1,4 +1,198 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<?import javafx.scene.layout.AnchorPane?>
-<AnchorPane xmlns="http://javafx.com/javafx" xmlns:fx="http://javafx.com/fxml" fx:controller="org.example.controller.TicketFormController">
-</AnchorPane>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<BorderPane xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="org.example.controller.TicketDetailController"
+            styleClass="root" prefWidth="1000" prefHeight="700">
+
+    <!-- TOP HEADER -->
+    <top>
+        <HBox styleClass="top-header" alignment="CENTER_LEFT" spacing="20">
+            <Label text="Ticket Details" style="-fx-font-size: 20px; -fx-font-weight: 600;"/>
+            <Region HBox.hgrow="ALWAYS"/>
+            <Button text="✕ Close" styleClass="btn-secondary" onAction="#handleClose"/>
+        </HBox>
+    </top>
+
+    <!-- MAIN CONTENT -->
+    <center>
+        <ScrollPane fitToWidth="true" style="-fx-background-color: #f6f8fa;">
+            <VBox styleClass="content-area" spacing="20">
+                <!-- TICKET HEADER CARD -->
+                <VBox style="-fx-background-color: white; -fx-border-color: #d0d7de;
+                            -fx-border-width: 1; -fx-border-radius: 6; -fx-background-radius: 6;
+                            -fx-padding: 20;">
+                    <VBox spacing="15">
+                        <!-- Title Row -->
+                        <HBox alignment="CENTER_LEFT" spacing="15">
+                            <Label fx:id="ticketIdLabel" text="TKT-001"
+                                   style="-fx-font-size: 14px; -fx-text-fill: #57606a; -fx-font-family: monospace;"/>
+                            <Label fx:id="statusLabel" text="Open" styleClass="status-badge status-open"/>
+                            <Label fx:id="priorityLabel" text="High" style="-fx-font-weight: 600;"/>
+                        </HBox>
+
+                        <!-- Title -->
+                        <Label fx:id="ticketTitleLabel" text="System Crash Issue"
+                               style="-fx-font-size: 24px; -fx-font-weight: 600; -fx-text-fill: #24292e;"/>
+
+                        <!-- Meta Info Grid -->
+                        <GridPane hgap="30" vgap="12">
+                            <columnConstraints>
+                                <ColumnConstraints minWidth="120"/>
+                                <ColumnConstraints minWidth="200"/>
+                                <ColumnConstraints minWidth="120"/>
+                                <ColumnConstraints minWidth="200"/>
+                            </columnConstraints>
+
+                            <Label text="Category:" style="-fx-text-fill: #57606a;"
+                                   GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+                            <Label fx:id="categoryLabel" text="Technical"
+                                   GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+
+                            <Label text="Assigned To:" style="-fx-text-fill: #57606a;"
+                                   GridPane.columnIndex="2" GridPane.rowIndex="0"/>
+                            <Label fx:id="assignedToLabel" text="John Doe"
+                                   GridPane.columnIndex="3" GridPane.rowIndex="0"/>
+
+                            <Label text="Created By:" style="-fx-text-fill: #57606a;"
+                                   GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+                            <Label fx:id="createdByLabel" text="Admin User"
+                                   GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+
+                            <Label text="Created:" style="-fx-text-fill: #57606a;"
+                                   GridPane.columnIndex="2" GridPane.rowIndex="1"/>
+                            <Label fx:id="createdAtLabel" text="2024-01-15 10:30"
+                                   GridPane.columnIndex="3" GridPane.rowIndex="1"/>
+
+                            <Label text="Last Updated:" style="-fx-text-fill: #57606a;"
+                                   GridPane.columnIndex="0" GridPane.rowIndex="2"/>
+                            <Label fx:id="updatedAtLabel" text="2024-01-15 14:20"
+                                   GridPane.columnIndex="1" GridPane.rowIndex="2"/>
+                        </GridPane>
+
+                        <Separator/>
+
+                        <!-- Description -->
+                        <VBox spacing="8">
+                            <Label text="Description" style="-fx-font-weight: 600; -fx-font-size: 14px;"/>
+                            <TextArea fx:id="descriptionArea" wrapText="true" editable="false"
+                                      prefRowCount="4" style="-fx-background-color: #f6f8fa;"/>
+                        </VBox>
+                    </VBox>
+                </VBox>
+
+                <!-- TWO COLUMN LAYOUT -->
+                <HBox spacing="20" HBox.hgrow="ALWAYS">
+                    <!-- LEFT COLUMN - Comments and Actions -->
+                    <VBox spacing="20" HBox.hgrow="ALWAYS">
+                        <!-- COMMENTS SECTION -->
+                        <VBox style="-fx-background-color: white; -fx-border-color: #d0d7de;
+                                    -fx-border-width: 1; -fx-border-radius: 6; -fx-background-radius: 6;
+                                    -fx-padding: 20;">
+                            <VBox spacing="15">
+                                <Label text="💬 Comments" style="-fx-font-weight: 600; -fx-font-size: 16px;"/>
+
+                                <Separator/>
+
+                                <!-- Comments List -->
+                                <ScrollPane fitToWidth="true" prefHeight="300"
+                                            style="-fx-background-color: transparent;">
+                                    <VBox fx:id="commentsContainer" spacing="12"/>
+                                </ScrollPane>
+
+                                <Separator/>
+
+                                <!-- Add Comment -->
+                                <VBox spacing="10">
+                                    <Label text="Add Comment" style="-fx-font-weight: 600;"/>
+                                    <TextArea fx:id="newCommentArea" promptText="Write a comment..."
+                                              wrapText="true" prefRowCount="3"/>
+                                    <HBox alignment="CENTER_RIGHT">
+                                        <Button fx:id="addCommentButton" text="Add Comment"
+                                                styleClass="btn-new-ticket" onAction="#handleAddComment"/>
+                                    </HBox>
+                                </VBox>
+                            </VBox>
+                        </VBox>
+
+                        <!-- HISTORY SECTION -->
+                        <VBox style="-fx-background-color: white; -fx-border-color: #d0d7de;
+                                    -fx-border-width: 1; -fx-border-radius: 6; -fx-background-radius: 6;
+                                    -fx-padding: 20;">
+                            <VBox spacing="12">
+                                <Label text="📜 Activity History" style="-fx-font-weight: 600; -fx-font-size: 16px;"/>
+                                <Separator/>
+                                <VBox fx:id="historyContainer" spacing="8"/>
+                            </VBox>
+                        </VBox>
+                    </VBox>
+
+                    <!-- RIGHT COLUMN - Actions and AI Suggestions -->
+                    <VBox spacing="20" prefWidth="350">
+                        <!-- ACTIONS PANEL -->
+                        <VBox style="-fx-background-color: white; -fx-border-color: #d0d7de;
+                                    -fx-border-width: 1; -fx-border-radius: 6; -fx-background-radius: 6;
+                                    -fx-padding: 20;">
+                            <VBox spacing="15">
+                                <Label text="⚡ Quick Actions" style="-fx-font-weight: 600; -fx-font-size: 16px;"/>
+
+                                <Separator/>
+
+                                <!-- Status Update -->
+                                <VBox spacing="5">
+                                    <Label text="Update Status" style="-fx-font-weight: 600; -fx-font-size: 13px;"/>
+                                    <ComboBox fx:id="statusCombo" maxWidth="Infinity"
+                                              styleClass="filter-combo" onAction="#handleUpdateStatus"/>
+                                </VBox>
+
+                                <!-- Priority Update -->
+                                <VBox spacing="5">
+                                    <Label text="Update Priority" style="-fx-font-weight: 600; -fx-font-size: 13px;"/>
+                                    <ComboBox fx:id="priorityCombo" maxWidth="Infinity"
+                                              styleClass="filter-combo" onAction="#handleUpdatePriority"/>
+                                </VBox>
+
+                                <!-- Assignment Update -->
+                                <VBox spacing="5">
+                                    <Label text="Reassign Ticket" style="-fx-font-weight: 600; -fx-font-size: 13px;"/>
+                                    <ComboBox fx:id="assignCombo" maxWidth="Infinity"
+                                              styleClass="filter-combo" onAction="#handleUpdateAssignment"/>
+                                </VBox>
+                            </VBox>
+                        </VBox>
+
+                        <!-- AI SUGGESTIONS PANEL -->
+                        <VBox style="-fx-background-color: white; -fx-border-color: #d0d7de;
+                                    -fx-border-width: 1; -fx-border-radius: 6; -fx-background-radius: 6;
+                                    -fx-padding: 20;">
+                            <VBox spacing="15">
+                                <HBox alignment="CENTER_LEFT" spacing="8">
+                                    <Label text="🤖 AI Suggestions" style="-fx-font-weight: 600; -fx-font-size: 16px;"/>
+                                    <ProgressIndicator fx:id="loadingIndicator" prefWidth="16" prefHeight="16" visible="false"/>
+                                </HBox>
+
+                                <Separator/>
+
+                                <VBox fx:id="suggestionsContainer" spacing="10"/>
+                            </VBox>
+                        </VBox>
+
+                        <!-- RELATED TICKETS -->
+                        <VBox style="-fx-background-color: white; -fx-border-color: #d0d7de;
+                                    -fx-border-width: 1; -fx-border-radius: 6; -fx-background-radius: 6;
+                                    -fx-padding: 20;">
+                            <VBox spacing="12">
+                                <Label text="🔗 Similar Tickets" style="-fx-font-weight: 600; -fx-font-size: 16px;"/>
+                                <Separator/>
+                                <Label text="No similar tickets found" style="-fx-text-fill: #57606a; -fx-font-size: 13px;"/>
+                            </VBox>
+                        </VBox>
+                    </VBox>
+                </HBox>
+            </VBox>
+        </ScrollPane>
+    </center>
+</BorderPane>

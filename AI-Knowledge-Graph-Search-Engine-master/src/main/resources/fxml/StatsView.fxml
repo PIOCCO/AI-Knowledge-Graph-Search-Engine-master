@@ -1,0 +1,164 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.chart.*?>
+
+<BorderPane xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="org.example.controller.StatsViewController"
+            styleClass="root">
+
+    <!-- TOP TOOLBAR -->
+    <top>
+        <VBox>
+            <HBox styleClass="top-header" alignment="CENTER_LEFT" spacing="20">
+                <Label text="📊 Statistics Dashboard" style="-fx-font-size: 20px; -fx-font-weight: 600;"/>
+                <Region HBox.hgrow="ALWAYS"/>
+                <ComboBox fx:id="timeRangeCombo" styleClass="filter-combo" prefWidth="150"/>
+                <DatePicker fx:id="startDatePicker" disable="true"/>
+                <DatePicker fx:id="endDatePicker" disable="true"/>
+                <Button fx:id="refreshButton" text="🔄 Refresh" styleClass="btn-secondary" onAction="#handleRefresh"/>
+                <Button fx:id="exportButton" text="📥 Export" styleClass="btn-secondary" onAction="#handleExport"/>
+                <ProgressIndicator fx:id="loadingIndicator" prefWidth="20" prefHeight="20" visible="false"/>
+            </HBox>
+        </VBox>
+    </top>
+
+    <!-- MAIN CONTENT -->
+    <center>
+        <ScrollPane fitToWidth="true" style="-fx-background-color: #f6f8fa;">
+            <VBox styleClass="content-area" spacing="20">
+
+                <!-- KPI CARDS -->
+                <GridPane hgap="15" vgap="15">
+                    <columnConstraints>
+                        <ColumnConstraints percentWidth="16.66"/>
+                        <ColumnConstraints percentWidth="16.66"/>
+                        <ColumnConstraints percentWidth="16.66"/>
+                        <ColumnConstraints percentWidth="16.66"/>
+                        <ColumnConstraints percentWidth="16.66"/>
+                        <ColumnConstraints percentWidth="16.66"/>
+                    </columnConstraints>
+
+                    <!-- Total Tickets -->
+                    <VBox styleClass="stat-card" spacing="8" GridPane.columnIndex="0">
+                        <Label text="TOTAL TICKETS" style="-fx-text-fill: #57606a; -fx-font-size: 11px; -fx-font-weight: 600;"/>
+                        <Label fx:id="totalTicketsLabel" text="0" style="-fx-font-size: 28px; -fx-font-weight: 700;"/>
+                        <Label text="All time" style="-fx-text-fill: #57606a; -fx-font-size: 11px;"/>
+                    </VBox>
+
+                    <!-- Avg Resolution -->
+                    <VBox styleClass="stat-card" spacing="8" GridPane.columnIndex="1">
+                        <Label text="AVG RESOLUTION" style="-fx-text-fill: #57606a; -fx-font-size: 11px; -fx-font-weight: 600;"/>
+                        <Label fx:id="avgResolutionLabel" text="0h" style="-fx-font-size: 28px; -fx-font-weight: 700; -fx-text-fill: #0969da;"/>
+                        <Label text="Time to resolve" style="-fx-text-fill: #57606a; -fx-font-size: 11px;"/>
+                    </VBox>
+
+                    <!-- Today Tickets -->
+                    <VBox styleClass="stat-card" spacing="8" GridPane.columnIndex="2">
+                        <Label text="TODAY" style="-fx-text-fill: #57606a; -fx-font-size: 11px; -fx-font-weight: 600;"/>
+                        <Label fx:id="todayTicketsLabel" text="0" style="-fx-font-size: 28px; -fx-font-weight: 700; -fx-text-fill: #fb8500;"/>
+                        <Label text="New tickets" style="-fx-text-fill: #57606a; -fx-font-size: 11px;"/>
+                    </VBox>
+
+                    <!-- SLA Breaches -->
+                    <VBox styleClass="stat-card" spacing="8" GridPane.columnIndex="3">
+                        <Label text="SLA BREACHES" style="-fx-text-fill: #57606a; -fx-font-size: 11px; -fx-font-weight: 600;"/>
+                        <Label fx:id="slaBreachLabel" text="0" style="-fx-font-size: 28px; -fx-font-weight: 700; -fx-text-fill: #d1242f;"/>
+                        <Label text="Last 30 days" style="-fx-text-fill: #57606a; -fx-font-size: 11px;"/>
+                    </VBox>
+
+                    <!-- Active Users -->
+                    <VBox styleClass="stat-card" spacing="8" GridPane.columnIndex="4">
+                        <Label text="ACTIVE USERS" style="-fx-text-fill: #57606a; -fx-font-size: 11px; -fx-font-weight: 600;"/>
+                        <Label fx:id="activeUsersLabel" text="0" style="-fx-font-size: 28px; -fx-font-weight: 700; -fx-text-fill: #1a7f37;"/>
+                        <Label text="This month" style="-fx-text-fill: #57606a; -fx-font-size: 11px;"/>
+                    </VBox>
+
+                    <!-- Closed Today -->
+                    <VBox styleClass="stat-card" spacing="8" GridPane.columnIndex="5">
+                        <Label text="CLOSED TODAY" style="-fx-text-fill: #57606a; -fx-font-size: 11px; -fx-font-weight: 600;"/>
+                        <Label fx:id="closedTodayLabel" text="0" style="-fx-font-size: 28px; -fx-font-weight: 700; -fx-text-fill: #1a7f37;"/>
+                        <Label text="Resolved tickets" style="-fx-text-fill: #57606a; -fx-font-size: 11px;"/>
+                    </VBox>
+                </GridPane>
+
+                <!-- CHARTS GRID -->
+                <GridPane hgap="20" vgap="20">
+                    <columnConstraints>
+                        <ColumnConstraints percentWidth="50"/>
+                        <ColumnConstraints percentWidth="50"/>
+                    </columnConstraints>
+
+                    <!-- Ticket Trend Chart -->
+                    <VBox styleClass="stat-card" spacing="10" GridPane.columnIndex="0" GridPane.rowIndex="0">
+                        <Label text="📈 Ticket Trend (30 Days)" style="-fx-font-weight: 600; -fx-font-size: 14px;"/>
+                        <LineChart fx:id="ticketTrendChart" prefHeight="300" legendVisible="true">
+                            <xAxis><CategoryAxis side="BOTTOM"/></xAxis>
+                            <yAxis><NumberAxis side="LEFT"/></yAxis>
+                        </LineChart>
+                    </VBox>
+
+                    <!-- Status Distribution -->
+                    <VBox styleClass="stat-card" spacing="10" GridPane.columnIndex="1" GridPane.rowIndex="0">
+                        <Label text="📊 Status Distribution" style="-fx-font-weight: 600; -fx-font-size: 14px;"/>
+                        <PieChart fx:id="statusDistributionChart" prefHeight="300" legendVisible="true"/>
+                    </VBox>
+
+                    <!-- Priority Distribution -->
+                    <VBox styleClass="stat-card" spacing="10" GridPane.columnIndex="0" GridPane.rowIndex="1">
+                        <Label text="⚡ Priority Distribution" style="-fx-font-weight: 600; -fx-font-size: 14px;"/>
+                        <BarChart fx:id="priorityDistributionChart" prefHeight="300" legendVisible="false">
+                            <xAxis><CategoryAxis side="BOTTOM"/></xAxis>
+                            <yAxis><NumberAxis side="LEFT"/></yAxis>
+                        </BarChart>
+                    </VBox>
+
+                    <!-- Resolution Time -->
+                    <VBox styleClass="stat-card" spacing="10" GridPane.columnIndex="1" GridPane.rowIndex="1">
+                        <Label text="⏱️ Average Resolution Time" style="-fx-font-weight: 600; -fx-font-size: 14px;"/>
+                        <AreaChart fx:id="resolutionTimeChart" prefHeight="300" legendVisible="false">
+                            <xAxis><CategoryAxis side="BOTTOM"/></xAxis>
+                            <yAxis><NumberAxis side="LEFT"/></yAxis>
+                        </AreaChart>
+                    </VBox>
+
+                    <!-- Category Performance -->
+                    <VBox styleClass="stat-card" spacing="10" GridPane.columnIndex="0" GridPane.rowIndex="2">
+                        <Label text="📁 Top Categories" style="-fx-font-weight: 600; -fx-font-size: 14px;"/>
+                        <BarChart fx:id="categoryPerformanceChart" prefHeight="300" legendVisible="false">
+                            <xAxis><CategoryAxis side="BOTTOM"/></xAxis>
+                            <yAxis><NumberAxis side="LEFT"/></yAxis>
+                        </BarChart>
+                    </VBox>
+
+                    <!-- Agent Workload -->
+                    <VBox styleClass="stat-card" spacing="10" GridPane.columnIndex="1" GridPane.rowIndex="2">
+                        <Label text="👥 Agent Workload" style="-fx-font-weight: 600; -fx-font-size: 14px;"/>
+                        <PieChart fx:id="agentWorkloadChart" prefHeight="300" legendVisible="true"/>
+                    </VBox>
+
+                    <!-- SLA Compliance -->
+                    <VBox styleClass="stat-card" spacing="10" GridPane.columnIndex="0" GridPane.rowIndex="3">
+                        <Label text="✅ SLA Compliance Trend" style="-fx-font-weight: 600; -fx-font-size: 14px;"/>
+                        <LineChart fx:id="slaComplianceChart" prefHeight="300" legendVisible="false">
+                            <xAxis><CategoryAxis side="BOTTOM"/></xAxis>
+                            <yAxis><NumberAxis side="LEFT" label="%"/></yAxis>
+                        </LineChart>
+                    </VBox>
+
+                    <!-- Weekly Activity -->
+                    <VBox styleClass="stat-card" spacing="10" GridPane.columnIndex="1" GridPane.rowIndex="3">
+                        <Label text="📅 Weekly Activity" style="-fx-font-weight: 600; -fx-font-size: 14px;"/>
+                        <StackedBarChart fx:id="weeklyActivityChart" prefHeight="300" legendVisible="true">
+                            <xAxis><CategoryAxis side="BOTTOM"/></xAxis>
+                            <yAxis><NumberAxis side="LEFT"/></yAxis>
+                        </StackedBarChart>
+                    </VBox>
+                </GridPane>
+
+            </VBox>
+        </ScrollPane>
+    </center>
+</BorderPane>

@@ -3,31 +3,32 @@ package org.example.controller;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
+import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.geometry.Pos;
-import javafx.fxml.FXMLLoader;
+import javafx.scene.control.ScrollPane;
 
 import org.example.model.Ticket;
 import org.example.repository.TicketRepository;
 
 import java.net.URL;
+import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.ResourceBundle;
 
 public class MainController implements Initializable {
 
-    // Sidebar Buttons
+    // Sidebar Navigation Buttons
     @FXML private Button btnDashboard;
     @FXML private Button btnTickets;
     @FXML private Button btnNewTicket;
     @FXML private Button btnCategories;
     @FXML private Button btnUsers;
-    @FXML private Button btnSettings;
-    @FXML private Button btnLogout;
 
     // Header Elements
     @FXML private Label lblPageTitle;
@@ -35,14 +36,22 @@ public class MainController implements Initializable {
     @FXML private Label lblUsername;
     @FXML private Label lblUserRole;
 
+    // Toolbar
+    @FXML private HBox toolbarContainer;
+    @FXML private ComboBox<String> statusFilter;
+    @FXML private ComboBox<String> priorityFilter;
+
     // Dashboard Stats
     @FXML private Label lblTotalTickets;
     @FXML private Label lblOpenTickets;
     @FXML private Label lblProgressTickets;
     @FXML private Label lblResolvedTickets;
 
-    // Dashboard View
-    @FXML private VBox dashboardView;
+    // Views
+    @FXML private ScrollPane dashboardView;
+    @FXML private ScrollPane ticketsView;
+
+    // Recent Tickets Table
     @FXML private TableView<Ticket> recentTicketsTable;
     @FXML private TableColumn<Ticket, String> colTicketId;
     @FXML private TableColumn<Ticket, String> colTitle;
@@ -52,10 +61,7 @@ public class MainController implements Initializable {
     @FXML private TableColumn<Ticket, String> colAssignedTo;
     @FXML private TableColumn<Ticket, String> colCreatedAt;
 
-    // Tickets View
-    @FXML private VBox ticketsView;
-    @FXML private ComboBox<String> statusFilter;
-    @FXML private ComboBox<String> priorityFilter;
+    // All Tickets Table
     @FXML private TableView<Ticket> allTicketsTable;
     @FXML private TableColumn<Ticket, String> colAllTicketId;
     @FXML private TableColumn<Ticket, String> colAllTitle;
@@ -66,33 +72,26 @@ public class MainController implements Initializable {
     @FXML private TableColumn<Ticket, String> colAllCreatedAt;
     @FXML private TableColumn<Ticket, Void> colAllActions;
 
-    private Button activeButton;
+    private Button activeSidebarButton;
     private ObservableList<Ticket> ticketList;
     private TicketRepository ticketRepository;
 
     @Override
     public void initialize(URL url, ResourceBundle resourceBundle) {
-        // Initialize repository
         ticketRepository = new TicketRepository();
 
-        // Set active button
-        setActiveButton(btnDashboard);
+        // Set default active button
+        setActiveSidebarButton(btnDashboard);
 
-        // Setup user info
+        // Set user info
         lblUsername.setText("Admin User");
         lblUserRole.setText("Administrator");
 
-        // Setup filters
+        // Setup components
         setupFilters();
-
-        // Load data from Neo4j
         loadTicketsFromDatabase();
-
-        // Setup tables
         setupRecentTicketsTable();
         setupAllTicketsTable();
-
-        // Load stats
         updateDashboardStats();
 
         // Show dashboard by default
@@ -101,14 +100,14 @@ public class MainController implements Initializable {
 
     private void setupFilters() {
         statusFilter.setItems(FXCollections.observableArrayList(
-                "All", "Open", "In Progress", "Resolved", "Closed"
+                "Status: All", "New", "Open", "In Progress", "Resolved", "Closed"
         ));
-        statusFilter.setValue("All");
+        statusFilter.setValue("Status: All");
 
         priorityFilter.setItems(FXCollections.observableArrayList(
-                "All", "Low", "Medium", "High", "Critical"
+                "Severity: All", "Low", "Normal", "High", "Critical"
         ));
-        priorityFilter.setValue("All");
+        priorityFilter.setValue("Severity: All");
     }
 
     private void loadTicketsFromDatabase() {
@@ -118,8 +117,6 @@ public class MainController implements Initializable {
             System.out.println("✅ Loaded " + tickets.size() + " tickets from Neo4j");
         } catch (Exception e) {
             System.err.println("❌ Error loading tickets: " + e.getMessage());
-            e.printStackTrace();
-            // Fallback to empty list
             ticketList = FXCollections.observableArrayList();
         }
     }
@@ -131,15 +128,24 @@ public class MainController implements Initializable {
         colPriority.setCellValueFactory(new PropertyValueFactory<>("priority"));
         colCategory.setCellValueFactory(new PropertyValueFactory<>("category"));
         colAssignedTo.setCellValueFactory(new PropertyValueFactory<>("assignedTo"));
-        colCreatedAt.setCellValueFactory(new PropertyValueFactory<>("createdAtFormatted"));
+        colCreatedAt.setCellValueFactory(cellData -> {
+            long days = ChronoUnit.DAYS.between(
+                    cellData.getValue().getCreatedAt(),
+                    LocalDateTime.now()
+            );
+            return new javafx.beans.property.SimpleStringProperty(days + "");
+        });
 
-        // Apply custom cell factories for styling
+        // Apply custom cell styling
         colStatus.setCellFactory(col -> createStatusCell());
-        colPriority.setCellFactory(col -> createPriorityCell());
+        colPriority.setCellFactory(col -> createSeverityCell());
+        colCategory.setCellFactory(col -> createTypeCell());
+        colAssignedTo.setCellFactory(col -> createGroupCell());
+        colCreatedAt.setCellFactory(col -> createDaysCell());
 
-        // Load recent tickets (first 5)
+        // Load recent tickets
         recentTicketsTable.setItems(FXCollections.observableArrayList(
-                ticketList.subList(0, Math.min(5, ticketList.size()))
+                ticketList.subList(0, Math.min(10, ticketList.size()))
         ));
     }
 
@@ -150,22 +156,29 @@ public class MainController implements Initializable {
         colAllPriority.setCellValueFactory(new PropertyValueFactory<>("priority"));
         colAllCategory.setCellValueFactory(new PropertyValueFactory<>("category"));
         colAllAssignedTo.setCellValueFactory(new PropertyValueFactory<>("assignedTo"));
-        colAllCreatedAt.setCellValueFactory(new PropertyValueFactory<>("createdAtFormatted"));
+        colAllCreatedAt.setCellValueFactory(cellData -> {
+            long days = ChronoUnit.DAYS.between(
+                    cellData.getValue().getCreatedAt(),
+                    LocalDateTime.now()
+            );
+            return new javafx.beans.property.SimpleStringProperty(days + "");
+        });
 
-        // Apply custom cell factories
+        // Apply styling
         colAllStatus.setCellFactory(col -> createStatusCell());
-        colAllPriority.setCellFactory(col -> createPriorityCell());
+        colAllPriority.setCellFactory(col -> createSeverityCell());
+        colAllCategory.setCellFactory(col -> createTypeCell());
+        colAllAssignedTo.setCellFactory(col -> createGroupCell());
+        colAllCreatedAt.setCellFactory(col -> createDaysCell());
 
         // Actions column
         colAllActions.setCellFactory(col -> new TableCell<>() {
             private final Button viewBtn = new Button("👁️");
             private final Button editBtn = new Button("✏️");
-            private final Button deleteBtn = new Button("🗑️");
 
             {
                 viewBtn.setStyle("-fx-background-color: transparent; -fx-cursor: hand;");
                 editBtn.setStyle("-fx-background-color: transparent; -fx-cursor: hand;");
-                deleteBtn.setStyle("-fx-background-color: transparent; -fx-cursor: hand;");
 
                 viewBtn.setOnAction(e -> {
                     Ticket ticket = getTableView().getItems().get(getIndex());
@@ -176,11 +189,6 @@ public class MainController implements Initializable {
                     Ticket ticket = getTableView().getItems().get(getIndex());
                     handleEditTicket(ticket);
                 });
-
-                deleteBtn.setOnAction(e -> {
-                    Ticket ticket = getTableView().getItems().get(getIndex());
-                    handleDeleteTicket(ticket);
-                });
             }
 
             @Override
@@ -189,7 +197,7 @@ public class MainController implements Initializable {
                 if (empty) {
                     setGraphic(null);
                 } else {
-                    HBox box = new HBox(5, viewBtn, editBtn, deleteBtn);
+                    HBox box = new HBox(8, viewBtn, editBtn);
                     box.setAlignment(Pos.CENTER);
                     setGraphic(box);
                 }
@@ -199,6 +207,7 @@ public class MainController implements Initializable {
         allTicketsTable.setItems(ticketList);
     }
 
+    // Cell Factories for Custom Styling
     private TableCell<Ticket, String> createStatusCell() {
         return new TableCell<>() {
             @Override
@@ -208,56 +217,111 @@ public class MainController implements Initializable {
                     setText(null);
                     setGraphic(null);
                 } else {
-                    Label label = new Label(status);
-                    label.getStyleClass().add("status-badge");
+                    Label badge = new Label(status);
+                    badge.getStyleClass().add("status-badge");
 
-                    switch (status) {
-                        case "Open":
-                            label.getStyleClass().add("status-open");
+                    String normalized = status.toLowerCase().replace(" ", "-");
+                    switch (normalized) {
+                        case "new":
+                            badge.getStyleClass().add("status-new");
                             break;
-                        case "In Progress":
-                            label.getStyleClass().add("status-progress");
+                        case "open":
+                            badge.getStyleClass().add("status-open");
                             break;
-                        case "Resolved":
-                            label.getStyleClass().add("status-resolved");
+                        case "in-progress":
+                        case "in_progress":
+                            badge.getStyleClass().add("status-progress");
                             break;
-                        case "Closed":
-                            label.getStyleClass().add("status-closed");
+                        case "resolved":
+                            badge.getStyleClass().add("status-resolved");
+                            break;
+                        case "closed":
+                            badge.getStyleClass().add("status-closed");
                             break;
                     }
 
-                    setGraphic(label);
+                    setGraphic(badge);
                     setText(null);
                 }
             }
         };
     }
 
-    private TableCell<Ticket, String> createPriorityCell() {
+    private TableCell<Ticket, String> createSeverityCell() {
         return new TableCell<>() {
             @Override
-            protected void updateItem(String priority, boolean empty) {
-                super.updateItem(priority, empty);
-                if (empty || priority == null) {
+            protected void updateItem(String severity, boolean empty) {
+                super.updateItem(severity, empty);
+                if (empty || severity == null) {
                     setText(null);
                     setStyle("");
                 } else {
-                    setText(priority);
+                    setText(severity);
 
-                    switch (priority) {
-                        case "Low":
-                            setStyle("-fx-text-fill: #0f5132;");
+                    switch (severity.toLowerCase()) {
+                        case "low":
+                        case "normal":
+                            setStyle("-fx-text-fill: #24292e;");
                             break;
-                        case "Medium":
-                            setStyle("-fx-text-fill: #664d03; -fx-font-weight: bold;");
+                        case "medium":
+                            setStyle("-fx-text-fill: #24292e; -fx-font-weight: 500;");
                             break;
-                        case "High":
-                            setStyle("-fx-text-fill: #842029; -fx-font-weight: bold;");
+                        case "high":
+                            setStyle("-fx-text-fill: #d1242f; -fx-font-weight: 600;");
                             break;
-                        case "Critical":
-                            setStyle("-fx-text-fill: #721c24; -fx-font-weight: bold;");
+                        case "critical":
+                            setStyle("-fx-text-fill: #d1242f; -fx-font-weight: 700;");
                             break;
                     }
+                }
+            }
+        };
+    }
+
+    private TableCell<Ticket, String> createTypeCell() {
+        return new TableCell<>() {
+            @Override
+            protected void updateItem(String type, boolean empty) {
+                super.updateItem(type, empty);
+                if (empty || type == null) {
+                    setText(null);
+                    setGraphic(null);
+                } else {
+                    Label badge = new Label(type);
+                    badge.getStyleClass().add("type-badge");
+                    setGraphic(badge);
+                    setText(null);
+                }
+            }
+        };
+    }
+
+    private TableCell<Ticket, String> createGroupCell() {
+        return new TableCell<>() {
+            @Override
+            protected void updateItem(String group, boolean empty) {
+                super.updateItem(group, empty);
+                if (empty || group == null || group.isEmpty()) {
+                    setText("Unassigned");
+                    setStyle("-fx-text-fill: #57606a;");
+                } else {
+                    setText(group);
+                    getStyleClass().add("group-text");
+                }
+            }
+        };
+    }
+
+    private TableCell<Ticket, String> createDaysCell() {
+        return new TableCell<>() {
+            @Override
+            protected void updateItem(String days, boolean empty) {
+                super.updateItem(days, empty);
+                if (empty || days == null) {
+                    setText(null);
+                } else {
+                    setText(days);
+                    getStyleClass().add("days-text");
                 }
             }
         };
@@ -265,9 +329,16 @@ public class MainController implements Initializable {
 
     private void updateDashboardStats() {
         long total = ticketList.size();
-        long open = ticketList.stream().filter(t -> "Open".equals(t.getStatus())).count();
-        long progress = ticketList.stream().filter(t -> "In Progress".equals(t.getStatus())).count();
-        long resolved = ticketList.stream().filter(t -> "Resolved".equals(t.getStatus())).count();
+        long open = ticketList.stream()
+                .filter(t -> "Open".equalsIgnoreCase(t.getStatus()))
+                .count();
+        long progress = ticketList.stream()
+                .filter(t -> "In Progress".equalsIgnoreCase(t.getStatus()) ||
+                        "IN_PROGRESS".equalsIgnoreCase(t.getStatus()))
+                .count();
+        long resolved = ticketList.stream()
+                .filter(t -> "Resolved".equalsIgnoreCase(t.getStatus()))
+                .count();
 
         lblTotalTickets.setText(String.valueOf(total));
         lblOpenTickets.setText(String.valueOf(open));
@@ -278,16 +349,22 @@ public class MainController implements Initializable {
     // Navigation Handlers
     @FXML
     private void handleDashboard() {
-        setActiveButton(btnDashboard);
-        showDashboard();
+        setActiveSidebarButton(btnDashboard);
         lblPageTitle.setText("Dashboard");
+        showDashboard();
     }
 
     @FXML
     private void handleTickets() {
-        setActiveButton(btnTickets);
+        setActiveSidebarButton(btnTickets);
+        lblPageTitle.setText("My Tickets");
         showTicketsView();
+    }
+
+    @FXML
+    private void handleAllTickets() {
         lblPageTitle.setText("All Tickets");
+        showTicketsView();
     }
 
     @FXML
@@ -297,22 +374,26 @@ public class MainController implements Initializable {
 
     @FXML
     private void handleCategories() {
-        setActiveButton(btnCategories);
+        setActiveSidebarButton(btnCategories);
         lblPageTitle.setText("Categories");
         openCategoryManagement();
     }
 
     @FXML
     private void handleUsers() {
-        setActiveButton(btnUsers);
+        setActiveSidebarButton(btnUsers);
         lblPageTitle.setText("Users");
         openUserManagement();
     }
 
     @FXML
+    private void handleReports() {
+        lblPageTitle.setText("Reports");
+        showAlert("Reports", "Reports view coming soon", Alert.AlertType.INFORMATION);
+    }
+
+    @FXML
     private void handleSettings() {
-        setActiveButton(btnSettings);
-        lblPageTitle.setText("Settings");
         showAlert("Settings", "Settings panel coming soon", Alert.AlertType.INFORMATION);
     }
 
@@ -321,12 +402,9 @@ public class MainController implements Initializable {
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
         alert.setTitle("Logout");
         alert.setHeaderText("Are you sure you want to logout?");
-        alert.setContentText("You will be redirected to the login page.");
-
         alert.showAndWait().ifPresent(response -> {
             if (response == ButtonType.OK) {
-                System.out.println("Logout confirmed");
-                // TODO: Redirect to login page
+                System.exit(0);
             }
         });
     }
@@ -335,14 +413,9 @@ public class MainController implements Initializable {
     private void handleSearch() {
         String query = searchField.getText();
         if (!query.isEmpty()) {
-            showAlert("Search", "Searching for: " + query, Alert.AlertType.INFORMATION);
-            // TODO: Implement search functionality
+            System.out.println("Searching for: " + query);
+            // Implement search logic here
         }
-    }
-
-    @FXML
-    private void handleViewAllTickets() {
-        handleTickets();
     }
 
     @FXML
@@ -351,11 +424,11 @@ public class MainController implements Initializable {
         allTicketsTable.refresh();
         recentTicketsTable.refresh();
         updateDashboardStats();
-        showAlert("Refresh", "Ticket list refreshed from database", Alert.AlertType.INFORMATION);
     }
 
     private void handleViewTicket(Ticket ticket) {
-        showAlert("View Ticket", "Viewing ticket: " + ticket.getId() + "\n" + ticket.getTitle(),
+        showAlert("View Ticket",
+                "Ticket: " + ticket.getId() + "\n" + ticket.getTitle(),
                 Alert.AlertType.INFORMATION);
     }
 
@@ -363,44 +436,31 @@ public class MainController implements Initializable {
         openTicketForm(ticket);
     }
 
-    private void handleDeleteTicket(Ticket ticket) {
-        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-        alert.setTitle("Delete Ticket");
-        alert.setHeaderText("Delete " + ticket.getId() + "?");
-        alert.setContentText("This action cannot be undone.");
-
-        alert.showAndWait().ifPresent(response -> {
-            if (response == ButtonType.OK) {
-                boolean success = ticketRepository.delete(ticket.getId());
-                if (success) {
-                    ticketList.remove(ticket);
-                    updateDashboardStats();
-                    showAlert("Success", "Ticket deleted successfully!", Alert.AlertType.INFORMATION);
-                } else {
-                    showAlert("Error", "Failed to delete ticket", Alert.AlertType.ERROR);
-                }
-            }
-        });
-    }
-
     // View Management
     private void showDashboard() {
         dashboardView.setVisible(true);
+        dashboardView.setManaged(true);
         ticketsView.setVisible(false);
+        ticketsView.setManaged(false);
+        toolbarContainer.setVisible(false);
+        toolbarContainer.setManaged(false);
     }
 
     private void showTicketsView() {
         dashboardView.setVisible(false);
+        dashboardView.setManaged(false);
         ticketsView.setVisible(true);
+        ticketsView.setManaged(true);
+        toolbarContainer.setVisible(true);
+        toolbarContainer.setManaged(true);
     }
 
-    // Helper Methods
-    private void setActiveButton(Button button) {
-        if (activeButton != null) {
-            activeButton.getStyleClass().remove("active");
+    private void setActiveSidebarButton(Button button) {
+        if (activeSidebarButton != null) {
+            activeSidebarButton.getStyleClass().remove("active");
         }
         button.getStyleClass().add("active");
-        activeButton = button;
+        activeSidebarButton = button;
     }
 
     private void showAlert(String title, String content, Alert.AlertType type) {
@@ -411,30 +471,21 @@ public class MainController implements Initializable {
         alert.showAndWait();
     }
 
-    // Methods to open other windows
+    // Open Forms
     private void openTicketForm(Ticket ticket) {
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/TicketForm.fxml"));
             javafx.scene.Parent root = loader.load();
 
             TicketFormController controller = loader.getController();
-
             if (ticket != null) {
                 controller.setEditMode(ticket);
             }
 
             controller.setSaveCallback((savedTicket, isEdit) -> {
                 if (isEdit) {
-                    // Update ticket in database
-                    Ticket updated = ticketRepository.update(savedTicket);
-                    if (updated != null) {
-                        int index = ticketList.indexOf(ticket);
-                        if (index >= 0) {
-                            ticketList.set(index, savedTicket);
-                        }
-                    }
+                    ticketRepository.update(savedTicket);
                 } else {
-                    // Create new ticket in database
                     Ticket created = ticketRepository.create(savedTicket);
                     if (created != null) {
                         ticketList.add(0, created);
@@ -455,7 +506,7 @@ public class MainController implements Initializable {
             stage.showAndWait();
         } catch (Exception e) {
             e.printStackTrace();
-            showAlert("Error", "Failed to open ticket form: " + e.getMessage(), Alert.AlertType.ERROR);
+            showAlert("Error", "Failed to open ticket form", Alert.AlertType.ERROR);
         }
     }
 
@@ -474,7 +525,7 @@ public class MainController implements Initializable {
             stage.show();
         } catch (Exception e) {
             e.printStackTrace();
-            showAlert("Error", "Failed to open user management: " + e.getMessage(), Alert.AlertType.ERROR);
+            showAlert("Error", "Failed to open user management", Alert.AlertType.ERROR);
         }
     }
 
@@ -493,7 +544,7 @@ public class MainController implements Initializable {
             stage.show();
         } catch (Exception e) {
             e.printStackTrace();
-            showAlert("Error", "Failed to open category management: " + e.getMessage(), Alert.AlertType.ERROR);
+            showAlert("Error", "Failed to open category management", Alert.AlertType.ERROR);
         }
     }
 }
