@@ -144,7 +144,7 @@
                         <Label text="✅ SLA Compliance Trend" style="-fx-font-weight: 600; -fx-font-size: 14px;"/>
                         <LineChart fx:id="slaComplianceChart" prefHeight="300" legendVisible="false">
                             <xAxis><CategoryAxis side="BOTTOM"/></xAxis>
-                            <yAxis><NumberAxis side="LEFT" label="%"/></yAxis>
+                            <yAxis><NumberAxis side="LEFT" label="％"/></yAxis>
                         </LineChart>
                     </VBox>
 

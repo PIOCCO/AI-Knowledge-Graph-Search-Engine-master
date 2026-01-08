@@ -1,33 +1,33 @@
 package org.example.model;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
 
+/**
+ * Comment Model - Ticket comments and discussions
+ */
 public class Comment {
+
     private String id;
-    private String content;
     private String ticketId;
+    private String content;
     private String authorId;
     private String authorName;
+    private boolean isInternal; // Internal comments visible only to agents
+    private boolean edited;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
-    private boolean isInternal;
-    private List<String> attachmentIds;
-    private boolean edited;
 
+    // Constructors
     public Comment() {
-        this.attachmentIds = new ArrayList<>();
         this.createdAt = LocalDateTime.now();
         this.isInternal = false;
         this.edited = false;
     }
 
-    public Comment(String id, String content, String ticketId, String authorId) {
+    public Comment(String ticketId, String content, String authorId) {
         this();
-        this.id = id;
-        this.content = content;
         this.ticketId = ticketId;
+        this.content = content;
         this.authorId = authorId;
     }
 
@@ -40,22 +40,22 @@ public class Comment {
         this.id = id;
     }
 
-    public String getContent() {
-        return content;
-    }
-
-    public void setContent(String content) {
-        this.content = content;
-        this.updatedAt = LocalDateTime.now();
-        this.edited = true;
-    }
-
     public String getTicketId() {
         return ticketId;
     }
 
     public void setTicketId(String ticketId) {
         this.ticketId = ticketId;
+    }
+
+    public String getContent() {
+        return content;
+    }
+
+    public void setContent(String content) {
+        this.content = content;
+        this.edited = true;
+        this.updatedAt = LocalDateTime.now();
     }
 
     public String getAuthorId() {
@@ -74,6 +74,22 @@ public class Comment {
         this.authorName = authorName;
     }
 
+    public boolean isInternal() {
+        return isInternal;
+    }
+
+    public void setInternal(boolean internal) {
+        this.isInternal = internal;
+    }
+
+    public boolean isEdited() {
+        return edited;
+    }
+
+    public void setEdited(boolean edited) {
+        this.edited = edited;
+    }
+
     public LocalDateTime getCreatedAt() {
         return createdAt;
     }
@@ -90,37 +106,22 @@ public class Comment {
         this.updatedAt = updatedAt;
     }
 
-    public boolean isInternal() {
-        return isInternal;
-    }
-
-    public void setInternal(boolean internal) {
-        isInternal = internal;
-    }
-
-    public List<String> getAttachmentIds() {
-        return attachmentIds;
-    }
-
-    public void setAttachmentIds(List<String> attachmentIds) {
-        this.attachmentIds = attachmentIds;
-    }
-
-    public boolean isEdited() {
-        return edited;
-    }
-
-    public void setEdited(boolean edited) {
-        this.edited = edited;
+    @Override
+    public String toString() {
+        return String.format("Comment[%s] by %s on %s",
+                id, authorName, createdAt);
     }
 
     @Override
-    public String toString() {
-        return "Comment{" +
-                "id='" + id + '\'' +
-                ", authorName='" + authorName + '\'' +
-                ", createdAt=" + createdAt +
-                ", edited=" + edited +
-                '}';
+    public boolean equals(Object obj) {
+        if (this == obj) return true;
+        if (obj == null || getClass() != obj.getClass()) return false;
+        Comment other = (Comment) obj;
+        return id != null && id.equals(other.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return id != null ? id.hashCode() : 0;
     }
 }

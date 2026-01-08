@@ -4,35 +4,44 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Knowledge Base Model - Help articles and documentation
+ */
 public class KnowledgeBase {
+
     private String id;
     private String title;
     private String content;
-    private String categoryId;
-    private String authorId;
+    private String category;
     private List<String> tags;
+    private String authorId;
+    private String authorName;
+    private boolean published;
     private int viewCount;
     private int helpfulCount;
-    private boolean published;
+    private String icon;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
-    private String relatedTicketIds;
+    private LocalDateTime publishedAt;
 
+    // Constructors
     public KnowledgeBase() {
-        this.tags = new ArrayList<>();
+        this.createdAt = LocalDateTime.now();
+        this.updatedAt = LocalDateTime.now();
+        this.published = false;
         this.viewCount = 0;
         this.helpfulCount = 0;
-        this.published = false;
-        this.createdAt = LocalDateTime.now();
+        this.tags = new ArrayList<>();
     }
 
-    public KnowledgeBase(String id, String title, String content) {
+    public KnowledgeBase(String title, String content, String category) {
         this();
-        this.id = id;
         this.title = title;
         this.content = content;
+        this.category = category;
     }
 
+    // Getters and Setters
     public String getId() {
         return id;
     }
@@ -55,15 +64,31 @@ public class KnowledgeBase {
 
     public void setContent(String content) {
         this.content = content;
-        this.updatedAt = LocalDateTime.now();
     }
 
-    public String getCategoryId() {
-        return categoryId;
+    public String getCategory() {
+        return category;
     }
 
-    public void setCategoryId(String categoryId) {
-        this.categoryId = categoryId;
+    public void setCategory(String category) {
+        this.category = category;
+    }
+
+    public List<String> getTags() {
+        return tags;
+    }
+
+    public void setTags(List<String> tags) {
+        this.tags = tags;
+    }
+
+    public void addTag(String tag) {
+        if (this.tags == null) {
+            this.tags = new ArrayList<>();
+        }
+        if (!this.tags.contains(tag)) {
+            this.tags.add(tag);
+        }
     }
 
     public String getAuthorId() {
@@ -74,12 +99,23 @@ public class KnowledgeBase {
         this.authorId = authorId;
     }
 
-    public List<String> getTags() {
-        return tags;
+    public String getAuthorName() {
+        return authorName;
     }
 
-    public void setTags(List<String> tags) {
-        this.tags = tags;
+    public void setAuthorName(String authorName) {
+        this.authorName = authorName;
+    }
+
+    public boolean isPublished() {
+        return published;
+    }
+
+    public void setPublished(boolean published) {
+        this.published = published;
+        if (published && this.publishedAt == null) {
+            this.publishedAt = LocalDateTime.now();
+        }
     }
 
     public int getViewCount() {
@@ -106,12 +142,12 @@ public class KnowledgeBase {
         this.helpfulCount++;
     }
 
-    public boolean isPublished() {
-        return published;
+    public String getIcon() {
+        return icon;
     }
 
-    public void setPublished(boolean published) {
-        this.published = published;
+    public void setIcon(String icon) {
+        this.icon = icon;
     }
 
     public LocalDateTime getCreatedAt() {
@@ -130,21 +166,39 @@ public class KnowledgeBase {
         this.updatedAt = updatedAt;
     }
 
-    public String getRelatedTicketIds() {
-        return relatedTicketIds;
+    public LocalDateTime getPublishedAt() {
+        return publishedAt;
     }
 
-    public void setRelatedTicketIds(String relatedTicketIds) {
-        this.relatedTicketIds = relatedTicketIds;
+    public void setPublishedAt(LocalDateTime publishedAt) {
+        this.publishedAt = publishedAt;
+    }
+
+    // Helper Methods
+    public String getStatus() {
+        return published ? "Published" : "Draft";
+    }
+
+    public String getTagsAsString() {
+        return tags != null ? String.join(", ", tags) : "";
     }
 
     @Override
     public String toString() {
-        return "KnowledgeBase{" +
-                "id='" + id + '\'' +
-                ", title='" + title + '\'' +
-                ", views=" + viewCount +
-                ", helpful=" + helpfulCount +
-                '}';
+        return String.format("KB[%s]: %s (%s) - %s",
+                id, title, category, getStatus());
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) return true;
+        if (obj == null || getClass() != obj.getClass()) return false;
+        KnowledgeBase other = (KnowledgeBase) obj;
+        return id != null && id.equals(other.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return id != null ? id.hashCode() : 0;
     }
 }

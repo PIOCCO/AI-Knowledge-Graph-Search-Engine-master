@@ -1,226 +1,269 @@
 package org.example.service;
 
+import org.example.model.Report;
 import org.example.model.Ticket;
-import org.example.model.AuditLog;
 import org.example.repository.TicketRepository;
-import org.example.repository.AuditRepository;
-import org.example.util.ExportUtils;
-import org.example.util.DateUtils;
+import org.example.util.SecurityUtils;
 
-import java.io.IOException;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.stream.Collectors;
 
+/**
+ * Report Service - Generate and manage reports
+ */
 public class ReportService {
+
     private final TicketRepository ticketRepository;
-    private final AuditRepository auditRepository;
+    private final AnalyticsService analyticsService;
+    private final Map<String, Report> savedReports;
 
     public ReportService() {
         this.ticketRepository = new TicketRepository();
-        this.auditRepository = new AuditRepository();
+        this.analyticsService = new AnalyticsService();
+        this.savedReports = new HashMap<>();
     }
 
-    public String generateTicketReport() {
-        return generateTicketReport(LocalDateTime.now().minusDays(30), LocalDateTime.now());
-    }
+    /**
+     * Generate comprehensive report
+     */
+    public Report generateReport(String type, LocalDateTime startDate, LocalDateTime endDate,
+                                 boolean includeCharts, boolean includeSummary,
+                                 boolean includeDetails) {
+        Report report = new Report();
+        report.setId(SecurityUtils.generateId());
+        report.setName(type);
+        report.setType(type);
+        report.setStartDate(startDate);
+        report.setEndDate(endDate);
+        report.setIncludeCharts(includeCharts);
+        report.setIncludeSummary(includeSummary);
+        report.setIncludeDetails(includeDetails);
+        report.setGeneratedBy("Current User");
 
-    public String generateTicketReport(LocalDateTime startDate, LocalDateTime endDate) {
-        List<Ticket> tickets = ticketRepository.findAll();
+        Map<String, Object> data = new HashMap<>();
 
-        // Filter by date range
-        List<Ticket> filteredTickets = tickets.stream()
-                .filter(t -> t.getCreatedAt() != null &&
-                        t.getCreatedAt().isAfter(startDate) &&
-                        t.getCreatedAt().isBefore(endDate))
-                .toList();
-
-        StringBuilder report = new StringBuilder();
-        report.append("TICKET REPORT\n");
-        report.append("Period: ").append(DateUtils.formatDate(startDate))
-                .append(" to ").append(DateUtils.formatDate(endDate)).append("\n");
-        report.append("Total Tickets: ").append(filteredTickets.size()).append("\n\n");
-
-        // Status breakdown
-        Map<String, Long> statusCounts = new HashMap<>();
-        for (Ticket ticket : filteredTickets) {
-            String status = ticket.getStatus();
-            statusCounts.put(status, statusCounts.getOrDefault(status, 0L) + 1);
-        }
-
-        report.append("Status Breakdown:\n");
-        statusCounts
-                .forEach((status, count) -> report.append("  ").append(status).append(": ").append(count).append("\n"));
-
-        return report.toString();
-    }
-
-    public void exportTicketsToCSV(String filename) throws IOException {
-        List<Ticket> tickets = ticketRepository.findAll();
-        List<String[]> data = new ArrayList<>();
-
-        // Header
-        data.add(new String[] { "ID", "Title", "Status", "Priority", "Created", "Assigned To" });
-
-        // Data rows
-        for (Ticket ticket : tickets) {
-            data.add(new String[] {
-                    ticket.getId(),
-                    ticket.getTitle(),
-                    ticket.getStatus(),
-                    ticket.getPriority(),
-                    DateUtils.formatDateTime(ticket.getCreatedAt()),
-                    ticket.getAssignedTo() != null ? ticket.getAssignedTo() : "Unassigned"
-            });
-        }
-
-        ExportUtils.exportToCSV(data, filename);
-    }
-
-    public String generateSLAReport() {
-        return generateSLAComplianceReport(LocalDateTime.now().minusDays(30), LocalDateTime.now());
-    }
-
-    public String generateSLAComplianceReport(LocalDateTime startDate, LocalDateTime endDate) {
-        StringBuilder report = new StringBuilder();
-        report.append("SLA COMPLIANCE REPORT\n");
-        report.append("Period: ").append(DateUtils.formatDate(startDate))
-                .append(" to ").append(DateUtils.formatDate(endDate)).append("\n\n");
-
-        List<Ticket> tickets = ticketRepository.findAll();
-        long totalTickets = tickets.size();
-        long compliantTickets = totalTickets; // Simplified - would need actual SLA tracking
-
-        double complianceRate = totalTickets > 0 ? ((double) compliantTickets / totalTickets) * 100.0 : 100.0;
-
-        report.append("Total Tickets: ").append(totalTickets).append("\n");
-        report.append("Compliant: ").append(compliantTickets).append("\n");
-        report.append("Breached: ").append(totalTickets - compliantTickets).append("\n");
-        report.append("Compliance Rate: ").append(String.format("%.2f%%", complianceRate)).append("\n");
-
-        return report.toString();
-    }
-
-    public String generateAgentPerformanceReport() {
-        return generateAgentPerformanceReport("ALL_AGENTS");
-    }
-
-    public String generateAgentPerformanceReport(String agentId) {
-        List<Ticket> assignedTickets = ticketRepository.findByAssignee(agentId);
-
-        StringBuilder report = new StringBuilder();
-        report.append("AGENT PERFORMANCE REPORT\n");
-        report.append("Agent ID: ").append(agentId).append("\n\n");
-
-        report.append("Total Assigned: ").append(assignedTickets.size()).append("\n");
-
-        long resolved = assignedTickets.stream()
-                .filter(t -> "RESOLVED".equals(t.getStatus()) || "CLOSED".equals(t.getStatus()))
-                .count();
-
-        report.append("Resolved: ").append(resolved).append("\n");
-
-        double resolutionRate = assignedTickets.isEmpty() ? 0.0 : ((double) resolved / assignedTickets.size()) * 100.0;
-        report.append("Resolution Rate: ").append(String.format("%.2f%%", resolutionRate)).append("\n");
-
-        return report.toString();
-    }
-
-    public void exportReportToCSV(String filename, String dataKey) {
-        try {
-            exportTicketsToCSV(filename);
-        } catch (IOException e) {
-            System.err.println("Error exporting report: " + e.getMessage());
-        }
-    }
-
-    public String generateAuditReport(LocalDateTime startDate, LocalDateTime endDate, int limit) {
-        List<AuditLog> logs = auditRepository.findByDateRange(startDate, endDate, limit);
-
-        StringBuilder report = new StringBuilder();
-        report.append("AUDIT LOG REPORT\n");
-        report.append("Period: ").append(DateUtils.formatDate(startDate))
-                .append(" to ").append(DateUtils.formatDate(endDate)).append("\n");
-        report.append("Total Events: ").append(logs.size()).append("\n\n");
-
-        for (AuditLog log : logs) {
-            report.append(DateUtils.formatDateTime(log.getTimestamp()))
-                    .append(" - ").append(log.getUsername())
-                    .append(" - ").append(log.getAction())
-                    .append(" - ").append(log.getEntityType())
-                    .append("\n");
-        }
-
-        return report.toString();
-    }
-
-    public Map<String, Object> generateExecutiveSummary(LocalDateTime startDate, LocalDateTime endDate) {
-        Map<String, Object> summary = new HashMap<>();
-
-        List<Ticket> tickets = ticketRepository.findAll();
-        List<Ticket> periodTickets = tickets.stream()
-                .filter(t -> t.getCreatedAt() != null &&
-                        t.getCreatedAt().isAfter(startDate) &&
-                        t.getCreatedAt().isBefore(endDate))
-                .toList();
-
-        summary.put("period", DateUtils.formatDate(startDate) + " to " + DateUtils.formatDate(endDate));
-        summary.put("totalTickets", periodTickets.size());
-        summary.put("openTickets", periodTickets.stream().filter(t -> "OPEN".equals(t.getStatus())).count());
-        summary.put("resolvedTickets", periodTickets.stream().filter(t -> "RESOLVED".equals(t.getStatus())).count());
-        summary.put("averageResolutionTime", "2.5 hours"); // Simplified
-        summary.put("slaCompliance", "95%");
-        summary.put("customerSatisfaction", "4.5/5");
-
-        return summary;
-    }
-
-    public String generateCustomReport(String reportType, Map<String, Object> parameters) {
-        StringBuilder report = new StringBuilder();
-        report.append("CUSTOM REPORT: ").append(reportType).append("\n");
-        report.append("Generated: ").append(DateUtils.formatDateTime(LocalDateTime.now())).append("\n\n");
-
-        // Custom report logic based on type
-        switch (reportType) {
-            case "PRIORITY_ANALYSIS":
-                report.append(generatePriorityAnalysis());
+        switch (type) {
+            case "Ticket Summary Report":
+                data = generateTicketSummary(startDate, endDate);
                 break;
-            case "CATEGORY_BREAKDOWN":
-                report.append(generateCategoryBreakdown());
+            case "Agent Performance Report":
+                data = generateAgentPerformance(startDate, endDate);
                 break;
-            case "TREND_ANALYSIS":
-                report.append(generateTrendAnalysis());
+            case "SLA Compliance Report":
+                data = generateSLACompliance(startDate, endDate);
+                break;
+            case "Category Analysis Report":
+                data = generateCategoryAnalysis(startDate, endDate);
+                break;
+            case "Resolution Time Report":
+                data = generateResolutionTime(startDate, endDate);
                 break;
             default:
-                report.append("Unknown report type\n");
+                data = generateTicketSummary(startDate, endDate);
         }
 
-        return report.toString();
+        report.setData(data);
+        report.setPreviewText(generatePreviewText(type, data));
+
+        return report;
     }
 
-    private String generatePriorityAnalysis() {
-        StringBuilder analysis = new StringBuilder();
-        analysis.append("Priority Distribution:\n");
-        analysis.append("CRITICAL: ")
-                .append(ticketRepository.countByPriority(org.example.model.enums.Priority.CRITICAL)).append("\n");
-        analysis.append("HIGH: ").append(ticketRepository.countByPriority(org.example.model.enums.Priority.HIGH))
-                .append("\n");
-        analysis.append("MEDIUM: ").append(ticketRepository.countByPriority(org.example.model.enums.Priority.MEDIUM))
-                .append("\n");
-        analysis.append("LOW: ").append(ticketRepository.countByPriority(org.example.model.enums.Priority.LOW))
-                .append("\n");
-        return analysis.toString();
+    private Map<String, Object> generateTicketSummary(LocalDateTime start, LocalDateTime end) {
+        List<Ticket> tickets = ticketRepository.findAll().stream()
+                .filter(t -> t.getCreatedAt().isAfter(start) && t.getCreatedAt().isBefore(end))
+                .collect(Collectors.toList());
+
+        Map<String, Object> data = new HashMap<>();
+        data.put("totalTickets", tickets.size());
+        data.put("openTickets", tickets.stream().filter(t -> "Open".equals(t.getStatus())).count());
+        data.put("resolvedTickets", tickets.stream().filter(t -> "Resolved".equals(t.getStatus())).count());
+        data.put("closedTickets", tickets.stream().filter(t -> "Closed".equals(t.getStatus())).count());
+
+        // Priority breakdown
+        Map<String, Long> priorityBreakdown = tickets.stream()
+                .collect(Collectors.groupingBy(Ticket::getPriority, Collectors.counting()));
+        data.put("priorityBreakdown", priorityBreakdown);
+
+        // Category breakdown
+        Map<String, Long> categoryBreakdown = tickets.stream()
+                .filter(t -> t.getCategory() != null)
+                .collect(Collectors.groupingBy(Ticket::getCategory, Collectors.counting()));
+        data.put("categoryBreakdown", categoryBreakdown);
+
+        return data;
     }
 
-    private String generateCategoryBreakdown() {
-        return "Category breakdown analysis\n";
+    private Map<String, Object> generateAgentPerformance(LocalDateTime start, LocalDateTime end) {
+        List<Ticket> tickets = ticketRepository.findAll();
+
+        Map<String, Object> data = new HashMap<>();
+
+        // Tickets per agent
+        Map<String, Long> ticketsPerAgent = tickets.stream()
+                .filter(t -> t.getAssignedTo() != null)
+                .collect(Collectors.groupingBy(Ticket::getAssignedTo, Collectors.counting()));
+        data.put("ticketsPerAgent", ticketsPerAgent);
+
+        // Resolution rate per agent
+        Map<String, Double> resolutionRate = new HashMap<>();
+        for (Map.Entry<String, Long> entry : ticketsPerAgent.entrySet()) {
+            long resolved = tickets.stream()
+                    .filter(t -> entry.getKey().equals(t.getAssignedTo()))
+                    .filter(t -> "Resolved".equals(t.getStatus()) || "Closed".equals(t.getStatus()))
+                    .count();
+            resolutionRate.put(entry.getKey(), (double) resolved / entry.getValue() * 100);
+        }
+        data.put("resolutionRate", resolutionRate);
+
+        return data;
     }
 
-    private String generateTrendAnalysis() {
-        return "Trend analysis over time\n";
+    private Map<String, Object> generateSLACompliance(LocalDateTime start, LocalDateTime end) {
+        Map<String, Object> data = new HashMap<>();
+
+        // Simulated SLA data
+        data.put("totalTickets", 150);
+        data.put("slaCompliant", 135);
+        data.put("slaBreach", 15);
+        data.put("complianceRate", 90.0);
+        data.put("averageResponseTime", "2.5 hours");
+        data.put("averageResolutionTime", "24 hours");
+
+        return data;
     }
 
-    public void scheduleReport(String reportType, String schedule, String recipients) {
-        // Placeholder for scheduled report functionality
-        System.out.println("Scheduled " + reportType + " report for " + recipients + " on " + schedule);
+    private Map<String, Object> generateCategoryAnalysis(LocalDateTime start, LocalDateTime end) {
+        List<Ticket> tickets = ticketRepository.findAll();
+
+        Map<String, Object> data = new HashMap<>();
+
+        Map<String, Long> categoryCount = tickets.stream()
+                .filter(t -> t.getCategory() != null)
+                .collect(Collectors.groupingBy(Ticket::getCategory, Collectors.counting()));
+        data.put("categoryCount", categoryCount);
+
+        return data;
+    }
+
+    private Map<String, Object> generateResolutionTime(LocalDateTime start, LocalDateTime end) {
+        Map<String, Object> data = new HashMap<>();
+
+        // Simulated resolution time data
+        data.put("averageTime", "18.5 hours");
+        data.put("medianTime", "12 hours");
+        data.put("fastestResolution", "30 minutes");
+        data.put("slowestResolution", "96 hours");
+
+        return data;
+    }
+
+    private String generatePreviewText(String type, Map<String, Object> data) {
+        StringBuilder preview = new StringBuilder();
+        preview.append("=".repeat(60)).append("\n");
+        preview.append(type.toUpperCase()).append("\n");
+        preview.append("=".repeat(60)).append("\n\n");
+
+        preview.append("Generated: ").append(LocalDateTime.now()
+                .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))).append("\n\n");
+
+        preview.append("SUMMARY:\n");
+        preview.append("-".repeat(60)).append("\n");
+
+        data.forEach((key, value) -> {
+            preview.append(String.format("%-30s: %s\n",
+                    key.replaceAll("([A-Z])", " $1").trim(), value));
+        });
+
+        preview.append("\n").append("=".repeat(60)).append("\n");
+
+        return preview.toString();
+    }
+
+    /**
+     * Export report to file
+     */
+    public String exportReport(Report report, String format, String directory)
+            throws Exception {
+        String timestamp = LocalDateTime.now()
+                .format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
+        String filename = report.getName().replaceAll(" ", "_") + "_" + timestamp;
+
+        switch (format.toUpperCase()) {
+            case "PDF":
+                return exportToPDF(report, directory, filename);
+            case "HTML":
+                return exportToHTML(report, directory, filename);
+            case "CSV":
+                return exportToCSV(report, directory, filename);
+            case "EXCEL":
+                return exportToExcel(report, directory, filename);
+            case "JSON":
+                return exportToJSON(report, directory, filename);
+            default:
+                throw new IllegalArgumentException("Unsupported format: " + format);
+        }
+    }
+
+    private String exportToPDF(Report report, String dir, String filename) {
+        // Simulate PDF export
+        System.out.println("Exporting to PDF: " + filename);
+        return dir + "/" + filename + ".pdf";
+    }
+
+    private String exportToHTML(Report report, String dir, String filename) {
+        // Simulate HTML export
+        System.out.println("Exporting to HTML: " + filename);
+        return dir + "/" + filename + ".html";
+    }
+
+    private String exportToCSV(Report report, String dir, String filename) {
+        // Simulate CSV export
+        System.out.println("Exporting to CSV: " + filename);
+        return dir + "/" + filename + ".csv";
+    }
+
+    private String exportToExcel(Report report, String dir, String filename) {
+        // Simulate Excel export
+        System.out.println("Exporting to Excel: " + filename);
+        return dir + "/" + filename + ".xlsx";
+    }
+
+    private String exportToJSON(Report report, String dir, String filename) {
+        // Simulate JSON export
+        System.out.println("Exporting to JSON: " + filename);
+        return dir + "/" + filename + ".json";
+    }
+
+    /**
+     * Save report template
+     */
+    public void saveReport(Report report, String name) {
+        report.setName(name);
+        savedReports.put(name, report);
+        System.out.println("Report saved: " + name);
+    }
+
+    /**
+     * Load saved report
+     */
+    public Report loadReport(String name) {
+        return savedReports.get(name);
+    }
+
+    /**
+     * Delete saved report
+     */
+    public void deleteReport(String name) {
+        savedReports.remove(name);
+        System.out.println("Report deleted: " + name);
+    }
+
+    /**
+     * Get list of saved report names
+     */
+    public List<String> getSavedReportNames() {
+        return new ArrayList<>(savedReports.keySet());
     }
 }

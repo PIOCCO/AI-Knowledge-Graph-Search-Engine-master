@@ -58,6 +58,11 @@
                         styleClass="sidebar-item"
                         onAction="#handleReports" maxWidth="Infinity"/>
 
+                <Button text="📊  Stats"
+                        styleClass="sidebar-item"
+                        onAction="#handleOpenStats"
+                        maxWidth="Infinity"/>
+
                 <!-- Spacer to push settings to bottom -->
                 <Region VBox.vgrow="ALWAYS"/>
 

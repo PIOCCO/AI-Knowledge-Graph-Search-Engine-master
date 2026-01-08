@@ -11,6 +11,13 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.geometry.Pos;
 import javafx.scene.control.ScrollPane;
+import javafx.scene.Scene;
+import javafx.scene.layout.Pane;      // or VBox, StackPane, etc.
+import javafx.stage.Stage;
+import javafx.scene.Parent;
+
+
+
 
 import org.example.model.Ticket;
 import org.example.repository.TicketRepository;
@@ -526,6 +533,24 @@ public class MainController implements Initializable {
         } catch (Exception e) {
             e.printStackTrace();
             showAlert("Error", "Failed to open user management", Alert.AlertType.ERROR);
+        }
+    }
+
+    @FXML
+    private void handleOpenStats() {
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/StatsView.fxml"));
+            Parent root = loader.load();
+
+            Scene scene = new Scene(root, 1400, 900);
+            scene.getStylesheets().add(getClass().getResource("/css/style.css").toExternalForm());
+
+            Stage stage = new Stage();
+            stage.setTitle("📊 Statistics Dashboard");
+            stage.setScene(scene);
+            stage.show();
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 

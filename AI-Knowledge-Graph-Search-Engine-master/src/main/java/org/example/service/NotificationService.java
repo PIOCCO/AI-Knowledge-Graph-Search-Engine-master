@@ -34,7 +34,7 @@ public class NotificationService {
         Notification notification = createNotification(userId, message, type);
         notification.setRelatedEntityId(relatedEntityId);
         notification.setRelatedEntityType(relatedEntityType);
-        notification.setActionUrl(actionUrl);
+
 
         return saveNotification(notification);
     }
@@ -54,8 +54,7 @@ public class NotificationService {
                     "relatedEntityType", notification.getRelatedEntityType(),
                     "read", notification.isRead(),
                     "createdAt", notification.getCreatedAt().toString(),
-                    "priority", notification.getPriority(),
-                    "actionUrl", notification.getActionUrl()));
+                    "priority", notification.getPriority()));
             return notification;
         }
     }
@@ -141,7 +140,6 @@ public class NotificationService {
         notification.setRelatedEntityType((String) map.get("relatedEntityType"));
         notification.setRead(map.get("read") != null ? (Boolean) map.get("read") : false);
         notification.setPriority((String) map.get("priority"));
-        notification.setActionUrl((String) map.get("actionUrl"));
         if (map.get("createdAt") != null) {
             notification.setCreatedAt(LocalDateTime.parse((String) map.get("createdAt")));
         }

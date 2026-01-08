@@ -79,7 +79,7 @@ public class SearchService {
             return new ArrayList<>();
         }
 
-        return kbRepository.searchByTitle(query.trim());
+        return kbRepository.search(query.trim());
     }
 
     public List<KnowledgeBase> searchKnowledgeBaseByCategory(String categoryId) {
