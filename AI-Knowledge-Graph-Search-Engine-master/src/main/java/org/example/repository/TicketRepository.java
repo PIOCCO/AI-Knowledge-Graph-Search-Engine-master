@@ -13,7 +13,9 @@ import java.util.UUID;
 
 public class TicketRepository {
     private final Neo4jConnection connection;
-
+    // Create relationship to category
+    String relationQuery = "MATCH (t:Ticket {id: $ticketId}), (c:Category {id: $categoryId}) " +
+            "MERGE (t)-[:BELONGS_TO]->(c)";
     public TicketRepository() {
         this.connection = Neo4jConnection.getInstance();
     }

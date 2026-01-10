@@ -59,6 +59,10 @@ public class AppConfig {
         return getProperty("app.name", "AI Knowledge Graph");
     }
 
+    public Properties getProperties() {
+        return properties;
+    }
+
     public String getAppVersion() {
         return getProperty("app.version", "1.0.0");
     }

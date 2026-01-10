@@ -16,6 +16,11 @@ public class Ticket {
     private LocalDateTime updatedAt;
     private LocalDateTime dueDate; // Added for SLA tracking
     private LocalDateTime resolvedAt; // Added for resolution tracking
+    // ML Classification Fields
+    private String mlPredictedCategory;
+    private Double mlConfidence;
+    private LocalDateTime mlClassifiedAt;
+    private boolean autoClassified;
 
     public Ticket() {
         this.createdAt = LocalDateTime.now();
@@ -147,6 +152,26 @@ public class Ticket {
         if (createdAt == null)
             return "";
         return createdAt.format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
+    }
+
+    public String getMlPredictedCategory() { return mlPredictedCategory; }
+    public void setMlPredictedCategory(String mlPredictedCategory) {
+        this.mlPredictedCategory = mlPredictedCategory;
+    }
+
+    public Double getMlConfidence() { return mlConfidence; }
+    public void setMlConfidence(Double mlConfidence) {
+        this.mlConfidence = mlConfidence;
+    }
+
+    public LocalDateTime getMlClassifiedAt() { return mlClassifiedAt; }
+    public void setMlClassifiedAt(LocalDateTime mlClassifiedAt) {
+        this.mlClassifiedAt = mlClassifiedAt;
+    }
+
+    public boolean isAutoClassified() { return autoClassified; }
+    public void setAutoClassified(boolean autoClassified) {
+        this.autoClassified = autoClassified;
     }
 
     @Override

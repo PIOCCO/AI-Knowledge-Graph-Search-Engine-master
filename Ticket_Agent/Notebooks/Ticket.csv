@@ -1,0 +1,17 @@
+id,title,description,status,priority,category,assignedTo,createdBy
+TKT-001,Login Issue,Users cannot log in to the system,Open,High,Authentication,John,Admin
+TKT-002,Page Error,404 error on dashboard,Closed,Medium,Technical,Alice,Admin
+TKT-003,Password Reset,User forgot password,Open,Low,Authentication,Bob,Admin
+TKT-004,Payment Failed,Payment not processed,Open,High,Billing,Carol,Admin
+TKT-005,Bug Report,App crashes when saving,In Progress,Medium,Technical,Dave,Support
+TKT-006,Account Locked,User account locked after multiple attempts,Open,High,Authentication,Eve,Support
+TKT-007,Invoice Missing,Customer cannot find invoice,Open,Medium,Billing,Frank,Admin
+TKT-008,Slow Response,Application is very slow,In Progress,Medium,Technical,Grace,Admin
+TKT-009,Refund Request,User requests a refund,Closed,High,Billing,Hannah,Support
+TKT-010,Feature Request,Add dark mode to app,Open,Low,Support,Ian,Admin
+TKT-011,Password Complexity,Password rules not enforced,Open,Medium,Authentication,Jack,Support
+TKT-012,API Error,API returns 500 on fetch,In Progress,High,Technical,Karen,Admin
+TKT-013,Billing Adjustment,Incorrect billing amount,Closed,Medium,Billing,Liam,Admin
+TKT-014,Chat Not Working,Support chat fails to send messages,Open,Medium,Support,Mia,Support
+TKT-015,Data Sync Failed,Data not syncing between devices,Open,High,Technical,Noah,Admin
+
