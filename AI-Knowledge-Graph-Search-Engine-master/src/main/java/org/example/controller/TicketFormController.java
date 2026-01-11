@@ -34,6 +34,7 @@ public class TicketFormController implements Initializable {
         aiProgress.setVisible(false);
     }
 
+    
     private void setupComboBoxes() {
         // Priority options
         comboPriority.setItems(FXCollections.observableArrayList(

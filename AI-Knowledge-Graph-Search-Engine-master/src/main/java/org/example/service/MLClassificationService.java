@@ -13,8 +13,8 @@ import java.time.LocalDateTime;
 import java.util.concurrent.*;
 
 /**
- * ML Classification Service - Integrates with Jupyter notebook ML agent
- * Handles async ticket classification with confidence scoring
+ * ML Classification Service - Integrates with Python ML service
+ * FIXED: Proper error handling and path resolution
  */
 public class MLClassificationService {
 
@@ -24,9 +24,10 @@ public class MLClassificationService {
     private final TicketRepository ticketRepository;
     private final CategoryRepository categoryRepository;
     private final ExecutorService executorService;
-
-    // Queue for failed classifications to retry
     private final BlockingQueue<Ticket> retryQueue;
+
+    // Service health check
+    private volatile boolean serviceAvailable = false;
 
     public MLClassificationService() {
         this.mlConfig = MLConfig.getInstance();
@@ -36,23 +37,55 @@ public class MLClassificationService {
         this.executorService = Executors.newFixedThreadPool(3);
         this.retryQueue = new LinkedBlockingQueue<>();
 
-        // Configure HTTP client with timeouts
         this.httpClient = new OkHttpClient.Builder()
                 .connectTimeout(mlConfig.getTimeout(), TimeUnit.MILLISECONDS)
                 .readTimeout(mlConfig.getTimeout(), TimeUnit.MILLISECONDS)
                 .writeTimeout(mlConfig.getTimeout(), TimeUnit.MILLISECONDS)
                 .build();
 
-        // Start retry worker
+        // Check service availability on startup
+        checkServiceHealth();
         startRetryWorker();
     }
 
     /**
-     * Classify ticket asynchronously
+     * Check if ML service is available
+     */
+    private void checkServiceHealth() {
+        try {
+            Request request = new Request.Builder()
+                    .url(mlConfig.getServiceUrl() + "/health")
+                    .get()
+                    .build();
+
+            Response response = httpClient.newCall(request).execute();
+            serviceAvailable = response.isSuccessful();
+            response.close();
+
+            if (serviceAvailable) {
+                System.out.println("✅ ML Service is available at " + mlConfig.getServiceUrl());
+            } else {
+                System.err.println("⚠️ ML Service health check failed");
+            }
+        } catch (Exception e) {
+            serviceAvailable = false;
+            System.err.println("⚠️ ML Service not available: " + e.getMessage());
+            System.err.println("💡 Make sure to start the Python ML service first:");
+            System.err.println("   cd Ticket_Agent/ml_service && python ml_service.py");
+        }
+    }
+
+    /**
+     * Classify ticket asynchronously with fallback
      */
     public CompletableFuture<ClassificationResult> classifyTicketAsync(Ticket ticket) {
         if (!mlConfig.isEnabled()) {
             System.out.println("⚠️ ML Classification disabled - skipping");
+            return CompletableFuture.completedFuture(null);
+        }
+
+        if (!serviceAvailable) {
+            System.err.println("⚠️ ML Service unavailable - ticket will require manual classification");
             return CompletableFuture.completedFuture(null);
         }
 
@@ -61,7 +94,6 @@ public class MLClassificationService {
                 return classifyTicket(ticket);
             } catch (Exception e) {
                 System.err.println("❌ Classification failed for " + ticket.getId() + ": " + e.getMessage());
-                // Add to retry queue
                 retryQueue.offer(ticket);
                 return null;
             }
@@ -95,7 +127,6 @@ public class MLClassificationService {
                 .addHeader("Content-Type", "application/json")
                 .build();
 
-        // Execute request with timeout
         try (Response response = httpClient.newCall(request).execute()) {
             if (!response.isSuccessful()) {
                 throw new IOException("ML Service returned: " + response.code());
@@ -111,11 +142,11 @@ public class MLClassificationService {
             if (result.getConfidence() >= mlConfig.getConfidenceThreshold()) {
                 applyClassification(ticket, result);
                 System.out.println("✅ Classified as: " + result.getCategoryName() +
-                        " (confidence: " + result.getConfidence() + ")");
+                        " (confidence: " + String.format("%.2f%%", result.getConfidence() * 100) + ")");
             } else {
-                System.out.println("⚠️ Low confidence (" + result.getConfidence() +
+                System.out.println("⚠️ Low confidence (" +
+                        String.format("%.2f%%", result.getConfidence() * 100) +
                         ") - Manual classification required");
-                // Mark ticket for manual review
                 ticket.setStatus("NEEDS_CLASSIFICATION");
                 ticketRepository.update(ticket);
             }
@@ -124,6 +155,7 @@ public class MLClassificationService {
 
         } catch (IOException e) {
             System.err.println("❌ ML Service error: " + e.getMessage());
+            serviceAvailable = false; // Mark as unavailable for future requests
             throw e;
         }
     }
@@ -133,21 +165,15 @@ public class MLClassificationService {
      */
     private void applyClassification(Ticket ticket, ClassificationResult result) {
         try {
-            // Update ticket with ML predictions
             ticket.setCategoryId(result.getPredictedCategory());
             ticket.setCategory(result.getCategoryName());
+            ticket.setMlPredictedCategory(result.getPredictedCategory());
+            ticket.setMlConfidence(result.getConfidence());
+            ticket.setMlClassifiedAt(LocalDateTime.now());
+            ticket.setAutoClassified(true);
 
-            // Store ML metadata as custom properties
-            String metadata = String.format(
-                    "ML_CONFIDENCE=%.2f;AUTO_CLASSIFIED=true;CLASSIFIED_AT=%s",
-                    result.getConfidence(),
-                    LocalDateTime.now().toString()
-            );
-
-            // Update in database with category relationship
             ticketRepository.update(ticket);
 
-            // Create graph relationship with confidence score
             createCategoryRelationship(
                     ticket.getId(),
                     result.getPredictedCategory(),
@@ -199,13 +225,11 @@ public class MLClassificationService {
                 throw new IllegalArgumentException("Ticket not found: " + ticketId);
             }
 
-            // Update ticket
             var category = categoryRepository.findById(newCategoryId);
             ticket.setCategoryId(newCategoryId);
             ticket.setCategory(category != null ? category.getName() : newCategoryId);
             ticketRepository.update(ticket);
 
-            // Update relationship (manual override)
             createCategoryRelationship(ticketId, newCategoryId, 1.0, false);
 
             System.out.println("✅ Manual classification override: " + ticketId + " -> " + newCategoryId);
@@ -226,7 +250,6 @@ public class MLClassificationService {
                 .map(this::classifyTicketAsync)
                 .toList();
 
-        // Wait for all to complete
         CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
 
         long successful = futures.stream()
@@ -247,8 +270,17 @@ public class MLClassificationService {
                     Ticket ticket = retryQueue.poll(10, TimeUnit.SECONDS);
                     if (ticket != null) {
                         System.out.println("🔄 Retrying classification for: " + ticket.getId());
-                        Thread.sleep(5000); // Wait before retry
-                        classifyTicket(ticket);
+                        Thread.sleep(5000);
+
+                        // Re-check service availability
+                        checkServiceHealth();
+
+                        if (serviceAvailable) {
+                            classifyTicket(ticket);
+                        } else {
+                            // Put back in queue if service still unavailable
+                            retryQueue.offer(ticket);
+                        }
                     }
                 } catch (Exception e) {
                     System.err.println("❌ Retry failed: " + e.getMessage());
@@ -266,7 +298,6 @@ public class MLClassificationService {
         java.util.Map<String, Object> stats = new java.util.HashMap<>();
 
         try (var session = org.example.repository.Neo4jConnection.getInstance().getSession()) {
-            // Auto-classified tickets
             String query =
                     "MATCH (t:Ticket)-[r:BELONGS_TO]->(c:Category) " +
                             "WHERE r.autoClassified = true " +
@@ -277,7 +308,6 @@ public class MLClassificationService {
                 stats.put("autoClassified", result.next().get("autoClassified").asLong());
             }
 
-            // Manual classifications
             query =
                     "MATCH (t:Ticket)-[r:BELONGS_TO]->(c:Category) " +
                             "WHERE r.autoClassified = false " +
@@ -288,7 +318,6 @@ public class MLClassificationService {
                 stats.put("manualClassified", result.next().get("manual").asLong());
             }
 
-            // Average confidence
             query =
                     "MATCH (t:Ticket)-[r:BELONGS_TO]->(c:Category) " +
                             "WHERE r.autoClassified = true " +
@@ -300,6 +329,7 @@ public class MLClassificationService {
             }
 
             stats.put("pendingRetries", retryQueue.size());
+            stats.put("serviceAvailable", serviceAvailable);
 
         } catch (Exception e) {
             System.err.println("❌ Failed to get statistics: " + e.getMessage());

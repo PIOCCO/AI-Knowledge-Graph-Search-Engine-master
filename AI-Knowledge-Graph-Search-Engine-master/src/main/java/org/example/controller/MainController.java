@@ -6,6 +6,8 @@ import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
 import javafx.scene.control.*;
+import java.io.PrintStream;
+
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
@@ -16,7 +18,7 @@ import javafx.scene.layout.Pane;      // or VBox, StackPane, etc.
 import javafx.stage.Stage;
 import javafx.scene.Parent;
 
-
+import org.example.service.DatabaseInitializationService;
 
 
 import org.example.model.Ticket;
@@ -27,6 +29,8 @@ import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.ResourceBundle;
+import java.io.ByteArrayOutputStream;
+
 
 public class MainController implements Initializable {
 
@@ -78,6 +82,166 @@ public class MainController implements Initializable {
     @FXML private TableColumn<Ticket, String> colAllAssignedTo;
     @FXML private TableColumn<Ticket, String> colAllCreatedAt;
     @FXML private TableColumn<Ticket, Void> colAllActions;
+
+
+    // Add these methods to your MainController.java
+
+    /**
+     * Handle database initialization
+     * Add this button to your UI: Settings > Database > Initialize Relationships
+     */
+    @FXML
+    private void handleInitializeDatabase() {
+        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
+        confirm.setTitle("Initialize Database");
+        confirm.setHeaderText("Initialize all relationships?");
+        confirm.setContentText(
+                "This will create all missing relationships in your database.\n" +
+                        "This is safe to run multiple times (uses MERGE, not CREATE).\n\n" +
+                        "Continue?"
+        );
+
+        confirm.showAndWait().ifPresent(response -> {
+            if (response == ButtonType.OK) {
+                // Show progress
+                Alert progress = new Alert(Alert.AlertType.INFORMATION);
+                progress.setTitle("Initializing Database");
+                progress.setHeaderText("Please wait...");
+                progress.setContentText("Creating relationships in Neo4j...");
+                progress.show();
+
+                // Run in background thread
+                new Thread(() -> {
+                    try {
+                        DatabaseInitializationService service = new DatabaseInitializationService();
+                        service.initializeAllRelationships();
+
+                        javafx.application.Platform.runLater(() -> {
+                            progress.close();
+                            showAlert("Success",
+                                    "Database initialized successfully!\n\n" +
+                                            "All relationships have been created.\n" +
+                                            "Check the console for detailed statistics.",
+                                    Alert.AlertType.INFORMATION);
+                        });
+                    } catch (Exception e) {
+                        javafx.application.Platform.runLater(() -> {
+                            progress.close();
+                            showAlert("Error",
+                                    "Failed to initialize database:\n" + e.getMessage(),
+                                    Alert.AlertType.ERROR);
+                        });
+                        e.printStackTrace();
+                    }
+                }).start();
+            }
+        });
+    }
+
+    /**
+     * Handle verify database
+     */
+    @FXML
+    private void handleVerifyDatabase() {
+        Alert progress = new Alert(Alert.AlertType.INFORMATION);
+        progress.setTitle("Verifying Database");
+        progress.setHeaderText("Checking database structure...");
+        progress.show();
+
+        new Thread(() -> {
+            try {
+                DatabaseInitializationService service = new DatabaseInitializationService();
+
+                // Capture output
+                ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                PrintStream ps = new PrintStream(baos);
+                PrintStream old = System.out;
+                System.setOut(ps);
+
+                service.verifyDatabase();
+
+                System.out.flush();
+                System.setOut(old);
+                String output = baos.toString();
+
+                javafx.application.Platform.runLater(() -> {
+                    progress.close();
+
+                    // Show results in a dialog
+                    TextArea textArea = new TextArea(output);
+                    textArea.setEditable(false);
+                    textArea.setWrapText(true);
+                    textArea.setPrefRowCount(20);
+                    textArea.setPrefColumnCount(60);
+
+                    Alert alert = new Alert(Alert.AlertType.INFORMATION);
+                    alert.setTitle("Database Verification");
+                    alert.setHeaderText("Database Structure");
+                    alert.getDialogPane().setContent(textArea);
+                    alert.setResizable(true);
+                    alert.showAndWait();
+                });
+            } catch (Exception e) {
+                javafx.application.Platform.runLater(() -> {
+                    progress.close();
+                    showAlert("Error",
+                            "Failed to verify database:\n" + e.getMessage(),
+                            Alert.AlertType.ERROR);
+                });
+                e.printStackTrace();
+            }
+        }).start();
+    }
+
+    /**
+     * Quick fix - Initialize relationships for all existing tickets
+     */
+    @FXML
+    private void handleQuickFixRelationships() {
+        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
+        confirm.setTitle("Quick Fix");
+        confirm.setHeaderText("Fix relationships for existing tickets?");
+        confirm.setContentText(
+                "This will:\n" +
+                        "• Link all tickets to their categories\n" +
+                        "• Link all tickets to creators and assignees\n" +
+                        "• Create SLA relationships\n" +
+                        "• Create similar ticket links\n\n" +
+                        "Continue?"
+        );
+
+        confirm.showAndWait().ifPresent(response -> {
+            if (response == ButtonType.OK) {
+                new Thread(() -> {
+                    try {
+                        TicketRepository repo = new TicketRepository();
+                        List<Ticket> tickets = repo.findAll();
+
+                        int count = 0;
+                        for (Ticket ticket : tickets) {
+                            repo.save(ticket); // This will recreate all relationships
+                            count++;
+                        }
+
+                        final int totalFixed = count;
+                        javafx.application.Platform.runLater(() -> {
+                            showAlert("Success",
+                                    "Fixed relationships for " + totalFixed + " tickets!",
+                                    Alert.AlertType.INFORMATION);
+                            handleRefresh(); // Refresh the UI
+                        });
+                    } catch (Exception e) {
+                        javafx.application.Platform.runLater(() -> {
+                            showAlert("Error",
+                                    "Failed to fix relationships:\n" + e.getMessage(),
+                                    Alert.AlertType.ERROR);
+                        });
+                        e.printStackTrace();
+                    }
+                }).start();
+            }
+        });
+    }
 
     private Button activeSidebarButton;
     private ObservableList<Ticket> ticketList;

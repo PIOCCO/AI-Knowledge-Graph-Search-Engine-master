@@ -2,15 +2,11 @@ package org.example.repository;
 
 import org.example.model.User;
 import org.example.model.enums.UserRole;
-import org.neo4j.driver.Driver;
+import org.neo4j.driver.*;
 import org.neo4j.driver.Record;
-import org.neo4j.driver.Result;
-import org.neo4j.driver.Session;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import static org.neo4j.driver.Values.parameters;
 
@@ -21,6 +17,9 @@ public class UserRepository {
         this.driver = Neo4jConnection.getInstance().getDriver();
     }
 
+    /**
+     * Save user with relationships
+     */
     public User save(User user) {
         try (Session session = driver.session()) {
             String query = "MERGE (u:User {id: $id}) " +
@@ -41,14 +40,41 @@ public class UserRepository {
                     "department", user.getDepartment(),
                     "phone", user.getPhone(),
                     "active", user.isActive(),
-                    "createdAt",
-                    user.getCreatedAt() != null ? user.getCreatedAt().toString() : LocalDateTime.now().toString(),
+                    "createdAt", user.getCreatedAt() != null ? user.getCreatedAt().toString() : LocalDateTime.now().toString(),
                     "avatarUrl", user.getAvatarUrl()));
 
+            // Create team relationship if teamId exists
+            if (user.getTeamId() != null && !user.getTeamId().isEmpty()) {
+                createTeamRelationship(user.getId(), user.getTeamId());
+            }
+
+            System.out.println("✅ User saved: " + user.getUsername());
             return user;
         }
     }
 
+    /**
+     * Create MEMBER_OF relationship between User and Team
+     */
+    private void createTeamRelationship(String userId, String teamId) {
+        try (Session session = driver.session()) {
+            String query = """
+                    MATCH (u:User {id: $userId})
+                    MATCH (t:Team {id: $teamId})
+                    MERGE (u)-[r:MEMBER_OF]->(t)
+                    SET r.joinedAt = datetime()
+                    RETURN r
+                    """;
+            session.run(query, parameters("userId", userId, "teamId", teamId));
+            System.out.println("  ✓ User linked to team");
+        } catch (Exception e) {
+            System.err.println("  ❌ Error linking user to team: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Find user by ID
+     */
     public User findById(String id) {
         try (Session session = driver.session()) {
             String query = "MATCH (u:User {id: $id}) RETURN u";
@@ -62,6 +88,9 @@ public class UserRepository {
         }
     }
 
+    /**
+     * Find user by username
+     */
     public User findByUsername(String username) {
         try (Session session = driver.session()) {
             String query = "MATCH (u:User {username: $username}) RETURN u";
@@ -75,6 +104,9 @@ public class UserRepository {
         }
     }
 
+    /**
+     * Find all users
+     */
     public List<User> findAll() {
         try (Session session = driver.session()) {
             String query = "MATCH (u:User) RETURN u ORDER BY u.createdAt DESC";
@@ -89,6 +121,9 @@ public class UserRepository {
         }
     }
 
+    /**
+     * Find users by role
+     */
     public List<User> findByRole(UserRole role) {
         try (Session session = driver.session()) {
             String query = "MATCH (u:User {role: $role}) RETURN u";
@@ -103,13 +138,20 @@ public class UserRepository {
         }
     }
 
+    /**
+     * Delete user
+     */
     public void delete(String id) {
         try (Session session = driver.session()) {
             String query = "MATCH (u:User {id: $id}) DETACH DELETE u";
             session.run(query, parameters("id", id));
+            System.out.println("✅ User deleted: " + id);
         }
     }
 
+    /**
+     * Map database record to User object
+     */
     private User mapToUser(Map<String, Object> map) {
         User user = new User();
         user.setId((String) map.get("id"));
