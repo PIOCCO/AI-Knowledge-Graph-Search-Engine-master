@@ -224,7 +224,7 @@ public class TicketRepository {
      * Get all tickets
      */
     public List<Ticket> findAll() {
-        String query = "MATCH (t:Ticket) RETURN t ORDER BY t.createdAt DESC";
+        String query = "MATCH (t:Ticket) RETURN t AS t ORDER BY t.createdAt DESC";
         List<Ticket> tickets = new ArrayList<>();
 
         try (Session session = connection.getSession()) {

@@ -6,31 +6,22 @@ import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
 import javafx.scene.control.*;
-import java.io.PrintStream;
-
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.HBox;
-import javafx.scene.layout.VBox;
-import javafx.geometry.Pos;
-import javafx.scene.control.ScrollPane;
-import javafx.scene.Scene;
-import javafx.scene.layout.Pane;      // or VBox, StackPane, etc.
-import javafx.stage.Stage;
 import javafx.scene.Parent;
-
-import org.example.service.DatabaseInitializationService;
-
+import javafx.scene.Scene;
+import javafx.stage.Stage;
+import javafx.geometry.Pos;
 
 import org.example.model.Ticket;
 import org.example.repository.TicketRepository;
+
 
 import java.net.URL;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.ResourceBundle;
-import java.io.ByteArrayOutputStream;
-
 
 public class MainController implements Initializable {
 
@@ -62,6 +53,10 @@ public class MainController implements Initializable {
     @FXML private ScrollPane dashboardView;
     @FXML private ScrollPane ticketsView;
 
+    // Labels for counts
+    @FXML private Label recentTicketsCountLabel;
+    @FXML private Label allTicketsCountLabel;
+
     // Recent Tickets Table
     @FXML private TableView<Ticket> recentTicketsTable;
     @FXML private TableColumn<Ticket, String> colTicketId;
@@ -82,166 +77,6 @@ public class MainController implements Initializable {
     @FXML private TableColumn<Ticket, String> colAllAssignedTo;
     @FXML private TableColumn<Ticket, String> colAllCreatedAt;
     @FXML private TableColumn<Ticket, Void> colAllActions;
-
-
-    // Add these methods to your MainController.java
-
-    /**
-     * Handle database initialization
-     * Add this button to your UI: Settings > Database > Initialize Relationships
-     */
-    @FXML
-    private void handleInitializeDatabase() {
-        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
-        confirm.setTitle("Initialize Database");
-        confirm.setHeaderText("Initialize all relationships?");
-        confirm.setContentText(
-                "This will create all missing relationships in your database.\n" +
-                        "This is safe to run multiple times (uses MERGE, not CREATE).\n\n" +
-                        "Continue?"
-        );
-
-        confirm.showAndWait().ifPresent(response -> {
-            if (response == ButtonType.OK) {
-                // Show progress
-                Alert progress = new Alert(Alert.AlertType.INFORMATION);
-                progress.setTitle("Initializing Database");
-                progress.setHeaderText("Please wait...");
-                progress.setContentText("Creating relationships in Neo4j...");
-                progress.show();
-
-                // Run in background thread
-                new Thread(() -> {
-                    try {
-                        DatabaseInitializationService service = new DatabaseInitializationService();
-                        service.initializeAllRelationships();
-
-                        javafx.application.Platform.runLater(() -> {
-                            progress.close();
-                            showAlert("Success",
-                                    "Database initialized successfully!\n\n" +
-                                            "All relationships have been created.\n" +
-                                            "Check the console for detailed statistics.",
-                                    Alert.AlertType.INFORMATION);
-                        });
-                    } catch (Exception e) {
-                        javafx.application.Platform.runLater(() -> {
-                            progress.close();
-                            showAlert("Error",
-                                    "Failed to initialize database:\n" + e.getMessage(),
-                                    Alert.AlertType.ERROR);
-                        });
-                        e.printStackTrace();
-                    }
-                }).start();
-            }
-        });
-    }
-
-    /**
-     * Handle verify database
-     */
-    @FXML
-    private void handleVerifyDatabase() {
-        Alert progress = new Alert(Alert.AlertType.INFORMATION);
-        progress.setTitle("Verifying Database");
-        progress.setHeaderText("Checking database structure...");
-        progress.show();
-
-        new Thread(() -> {
-            try {
-                DatabaseInitializationService service = new DatabaseInitializationService();
-
-                // Capture output
-                ByteArrayOutputStream baos = new ByteArrayOutputStream();
-                PrintStream ps = new PrintStream(baos);
-                PrintStream old = System.out;
-                System.setOut(ps);
-
-                service.verifyDatabase();
-
-                System.out.flush();
-                System.setOut(old);
-                String output = baos.toString();
-
-                javafx.application.Platform.runLater(() -> {
-                    progress.close();
-
-                    // Show results in a dialog
-                    TextArea textArea = new TextArea(output);
-                    textArea.setEditable(false);
-                    textArea.setWrapText(true);
-                    textArea.setPrefRowCount(20);
-                    textArea.setPrefColumnCount(60);
-
-                    Alert alert = new Alert(Alert.AlertType.INFORMATION);
-                    alert.setTitle("Database Verification");
-                    alert.setHeaderText("Database Structure");
-                    alert.getDialogPane().setContent(textArea);
-                    alert.setResizable(true);
-                    alert.showAndWait();
-                });
-            } catch (Exception e) {
-                javafx.application.Platform.runLater(() -> {
-                    progress.close();
-                    showAlert("Error",
-                            "Failed to verify database:\n" + e.getMessage(),
-                            Alert.AlertType.ERROR);
-                });
-                e.printStackTrace();
-            }
-        }).start();
-    }
-
-    /**
-     * Quick fix - Initialize relationships for all existing tickets
-     */
-    @FXML
-    private void handleQuickFixRelationships() {
-        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
-        confirm.setTitle("Quick Fix");
-        confirm.setHeaderText("Fix relationships for existing tickets?");
-        confirm.setContentText(
-                "This will:\n" +
-                        "• Link all tickets to their categories\n" +
-                        "• Link all tickets to creators and assignees\n" +
-                        "• Create SLA relationships\n" +
-                        "• Create similar ticket links\n\n" +
-                        "Continue?"
-        );
-
-        confirm.showAndWait().ifPresent(response -> {
-            if (response == ButtonType.OK) {
-                new Thread(() -> {
-                    try {
-                        TicketRepository repo = new TicketRepository();
-                        List<Ticket> tickets = repo.findAll();
-
-                        int count = 0;
-                        for (Ticket ticket : tickets) {
-                            repo.save(ticket); // This will recreate all relationships
-                            count++;
-                        }
-
-                        final int totalFixed = count;
-                        javafx.application.Platform.runLater(() -> {
-                            showAlert("Success",
-                                    "Fixed relationships for " + totalFixed + " tickets!",
-                                    Alert.AlertType.INFORMATION);
-                            handleRefresh(); // Refresh the UI
-                        });
-                    } catch (Exception e) {
-                        javafx.application.Platform.runLater(() -> {
-                            showAlert("Error",
-                                    "Failed to fix relationships:\n" + e.getMessage(),
-                                    Alert.AlertType.ERROR);
-                        });
-                        e.printStackTrace();
-                    }
-                }).start();
-            }
-        });
-    }
 
     private Button activeSidebarButton;
     private ObservableList<Ticket> ticketList;
@@ -267,18 +102,27 @@ public class MainController implements Initializable {
 
         // Show dashboard by default
         showDashboard();
+
+        System.out.println("✅ MainController initialized with " + ticketList.size() + " tickets");
+        System.out.println("Loaded tickets: " + ticketList.size());
+        ticketList.forEach(t -> System.out.println(t.getId() + " - " + t.getTitle()));
+
     }
 
     private void setupFilters() {
-        statusFilter.setItems(FXCollections.observableArrayList(
-                "Status: All", "New", "Open", "In Progress", "Resolved", "Closed"
-        ));
-        statusFilter.setValue("Status: All");
+        if (statusFilter != null) {
+            statusFilter.setItems(FXCollections.observableArrayList(
+                    "Status: All", "New", "Open", "In Progress", "Resolved", "Closed"
+            ));
+            statusFilter.setValue("Status: All");
+        }
 
-        priorityFilter.setItems(FXCollections.observableArrayList(
-                "Severity: All", "Low", "Normal", "High", "Critical"
-        ));
-        priorityFilter.setValue("Severity: All");
+        if (priorityFilter != null) {
+            priorityFilter.setItems(FXCollections.observableArrayList(
+                    "Severity: All", "Low", "Normal", "High", "Critical"
+            ));
+            priorityFilter.setValue("Severity: All");
+        }
     }
 
     private void loadTicketsFromDatabase() {
@@ -288,11 +132,13 @@ public class MainController implements Initializable {
             System.out.println("✅ Loaded " + tickets.size() + " tickets from Neo4j");
         } catch (Exception e) {
             System.err.println("❌ Error loading tickets: " + e.getMessage());
+            e.printStackTrace();
             ticketList = FXCollections.observableArrayList();
         }
     }
 
     private void setupRecentTicketsTable() {
+        // Cell value factories
         colTicketId.setCellValueFactory(new PropertyValueFactory<>("id"));
         colTitle.setCellValueFactory(new PropertyValueFactory<>("title"));
         colStatus.setCellValueFactory(new PropertyValueFactory<>("status"));
@@ -304,23 +150,30 @@ public class MainController implements Initializable {
                     cellData.getValue().getCreatedAt(),
                     LocalDateTime.now()
             );
-            return new javafx.beans.property.SimpleStringProperty(days + "");
+            return new javafx.beans.property.SimpleStringProperty(days + "d");
         });
 
         // Apply custom cell styling
         colStatus.setCellFactory(col -> createStatusCell());
-        colPriority.setCellFactory(col -> createSeverityCell());
-        colCategory.setCellFactory(col -> createTypeCell());
-        colAssignedTo.setCellFactory(col -> createGroupCell());
-        colCreatedAt.setCellFactory(col -> createDaysCell());
+        colPriority.setCellFactory(col -> createPriorityCell());
+        colCategory.setCellFactory(col -> createCategoryCell());
+        colAssignedTo.setCellFactory(col -> createAssignedCell());
 
-        // Load recent tickets
-        recentTicketsTable.setItems(FXCollections.observableArrayList(
-                ticketList.subList(0, Math.min(10, ticketList.size()))
-        ));
+        // Load recent tickets (last 10)
+        int recentCount = Math.min(10, ticketList.size());
+        List<Ticket> recentTickets = ticketList.subList(0, recentCount);
+        recentTicketsTable.setItems(FXCollections.observableArrayList(recentTickets));
+
+        if (recentTicketsCountLabel != null) {
+            recentTicketsCountLabel.setText(recentCount + " Recent Tickets");
+        }
+
+        // Enable table scrolling
+        recentTicketsTable.setFixedCellSize(48);
     }
 
     private void setupAllTicketsTable() {
+        // Cell value factories
         colAllTicketId.setCellValueFactory(new PropertyValueFactory<>("id"));
         colAllTitle.setCellValueFactory(new PropertyValueFactory<>("title"));
         colAllStatus.setCellValueFactory(new PropertyValueFactory<>("status"));
@@ -332,15 +185,14 @@ public class MainController implements Initializable {
                     cellData.getValue().getCreatedAt(),
                     LocalDateTime.now()
             );
-            return new javafx.beans.property.SimpleStringProperty(days + "");
+            return new javafx.beans.property.SimpleStringProperty(days + "d");
         });
 
         // Apply styling
         colAllStatus.setCellFactory(col -> createStatusCell());
-        colAllPriority.setCellFactory(col -> createSeverityCell());
-        colAllCategory.setCellFactory(col -> createTypeCell());
-        colAllAssignedTo.setCellFactory(col -> createGroupCell());
-        colAllCreatedAt.setCellFactory(col -> createDaysCell());
+        colAllPriority.setCellFactory(col -> createPriorityCell());
+        colAllCategory.setCellFactory(col -> createCategoryCell());
+        colAllAssignedTo.setCellFactory(col -> createAssignedCell());
 
         // Actions column
         colAllActions.setCellFactory(col -> new TableCell<>() {
@@ -375,10 +227,17 @@ public class MainController implements Initializable {
             }
         });
 
+        // Load all tickets
         allTicketsTable.setItems(ticketList);
+
+        if (allTicketsCountLabel != null) {
+            allTicketsCountLabel.setText(ticketList.size() + " Total Tickets");
+        }
+
+        // Enable table scrolling
+        allTicketsTable.setFixedCellSize(48);
     }
 
-    // Cell Factories for Custom Styling
     private TableCell<Ticket, String> createStatusCell() {
         return new TableCell<>() {
             @Override
@@ -392,24 +251,7 @@ public class MainController implements Initializable {
                     badge.getStyleClass().add("status-badge");
 
                     String normalized = status.toLowerCase().replace(" ", "-");
-                    switch (normalized) {
-                        case "new":
-                            badge.getStyleClass().add("status-new");
-                            break;
-                        case "open":
-                            badge.getStyleClass().add("status-open");
-                            break;
-                        case "in-progress":
-                        case "in_progress":
-                            badge.getStyleClass().add("status-progress");
-                            break;
-                        case "resolved":
-                            badge.getStyleClass().add("status-resolved");
-                            break;
-                        case "closed":
-                            badge.getStyleClass().add("status-closed");
-                            break;
-                    }
+                    badge.getStyleClass().add("status-" + normalized);
 
                     setGraphic(badge);
                     setText(null);
@@ -418,81 +260,54 @@ public class MainController implements Initializable {
         };
     }
 
-    private TableCell<Ticket, String> createSeverityCell() {
+    private TableCell<Ticket, String> createPriorityCell() {
         return new TableCell<>() {
             @Override
-            protected void updateItem(String severity, boolean empty) {
-                super.updateItem(severity, empty);
-                if (empty || severity == null) {
+            protected void updateItem(String priority, boolean empty) {
+                super.updateItem(priority, empty);
+                if (empty || priority == null) {
                     setText(null);
                     setStyle("");
                 } else {
-                    setText(severity);
-
-                    switch (severity.toLowerCase()) {
-                        case "low":
-                        case "normal":
-                            setStyle("-fx-text-fill: #24292e;");
-                            break;
-                        case "medium":
-                            setStyle("-fx-text-fill: #24292e; -fx-font-weight: 500;");
-                            break;
-                        case "high":
-                            setStyle("-fx-text-fill: #d1242f; -fx-font-weight: 600;");
-                            break;
-                        case "critical":
-                            setStyle("-fx-text-fill: #d1242f; -fx-font-weight: 700;");
-                            break;
-                    }
+                    setText(priority);
+                    String style = switch (priority.toUpperCase()) {
+                        case "CRITICAL" -> "-fx-text-fill: #d1242f; -fx-font-weight: 700;";
+                        case "HIGH" -> "-fx-text-fill: #d1242f; -fx-font-weight: 600;";
+                        case "MEDIUM" -> "-fx-text-fill: #fb8500; -fx-font-weight: 500;";
+                        default -> "-fx-text-fill: #24292e;";
+                    };
+                    setStyle(style);
                 }
             }
         };
     }
 
-    private TableCell<Ticket, String> createTypeCell() {
+    private TableCell<Ticket, String> createCategoryCell() {
         return new TableCell<>() {
             @Override
-            protected void updateItem(String type, boolean empty) {
-                super.updateItem(type, empty);
-                if (empty || type == null) {
+            protected void updateItem(String category, boolean empty) {
+                super.updateItem(category, empty);
+                if (empty || category == null) {
                     setText(null);
-                    setGraphic(null);
                 } else {
-                    Label badge = new Label(type);
-                    badge.getStyleClass().add("type-badge");
-                    setGraphic(badge);
-                    setText(null);
+                    setText(category);
+                    setStyle("-fx-text-fill: #0969da;");
                 }
             }
         };
     }
 
-    private TableCell<Ticket, String> createGroupCell() {
+    private TableCell<Ticket, String> createAssignedCell() {
         return new TableCell<>() {
             @Override
-            protected void updateItem(String group, boolean empty) {
-                super.updateItem(group, empty);
-                if (empty || group == null || group.isEmpty()) {
+            protected void updateItem(String assignedTo, boolean empty) {
+                super.updateItem(assignedTo, empty);
+                if (empty || assignedTo == null || assignedTo.isEmpty()) {
                     setText("Unassigned");
                     setStyle("-fx-text-fill: #57606a;");
                 } else {
-                    setText(group);
-                    getStyleClass().add("group-text");
-                }
-            }
-        };
-    }
-
-    private TableCell<Ticket, String> createDaysCell() {
-        return new TableCell<>() {
-            @Override
-            protected void updateItem(String days, boolean empty) {
-                super.updateItem(days, empty);
-                if (empty || days == null) {
-                    setText(null);
-                } else {
-                    setText(days);
-                    getStyleClass().add("days-text");
+                    setText(assignedTo);
+                    setStyle("-fx-text-fill: #24292e;");
                 }
             }
         };
@@ -501,14 +316,15 @@ public class MainController implements Initializable {
     private void updateDashboardStats() {
         long total = ticketList.size();
         long open = ticketList.stream()
-                .filter(t -> "Open".equalsIgnoreCase(t.getStatus()))
+                .filter(t -> "OPEN".equalsIgnoreCase(t.getStatus()) || "Open".equalsIgnoreCase(t.getStatus()))
                 .count();
         long progress = ticketList.stream()
-                .filter(t -> "In Progress".equalsIgnoreCase(t.getStatus()) ||
-                        "IN_PROGRESS".equalsIgnoreCase(t.getStatus()))
+                .filter(t -> "IN_PROGRESS".equalsIgnoreCase(t.getStatus()) ||
+                        "In Progress".equalsIgnoreCase(t.getStatus()))
                 .count();
         long resolved = ticketList.stream()
-                .filter(t -> "Resolved".equalsIgnoreCase(t.getStatus()))
+                .filter(t -> "RESOLVED".equalsIgnoreCase(t.getStatus()) ||
+                        "Resolved".equalsIgnoreCase(t.getStatus()))
                 .count();
 
         lblTotalTickets.setText(String.valueOf(total));
@@ -584,22 +400,43 @@ public class MainController implements Initializable {
     private void handleSearch() {
         String query = searchField.getText();
         if (!query.isEmpty()) {
-            System.out.println("Searching for: " + query);
+            System.out.println("🔍 Searching for: " + query);
             // Implement search logic here
         }
     }
 
     @FXML
     private void handleRefresh() {
+        System.out.println("🔄 Refreshing data...");
         loadTicketsFromDatabase();
-        allTicketsTable.refresh();
-        recentTicketsTable.refresh();
+        setupRecentTicketsTable();
+        setupAllTicketsTable();
         updateDashboardStats();
+        showAlert("Refreshed", "Data refreshed successfully", Alert.AlertType.INFORMATION);
     }
 
+    @FXML
+    private void handleOpenStats() {
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/StatsView.fxml"));
+            Parent root = loader.load();
+
+            Scene scene = new Scene(root, 1400, 900);
+            scene.getStylesheets().add(getClass().getResource("/css/style.css").toExternalForm());
+
+            Stage stage = new Stage();
+            stage.setTitle("📊 Statistics Dashboard");
+            stage.setScene(scene);
+            stage.show();
+        } catch (Exception e) {
+            e.printStackTrace();
+            showAlert("Error", "Failed to open statistics: " + e.getMessage(), Alert.AlertType.ERROR);
+        }
+    }
+
+
     private void handleViewTicket(Ticket ticket) {
-        showAlert("View Ticket",
-                "Ticket: " + ticket.getId() + "\n" + ticket.getTitle(),
+        showAlert("View Ticket", "Ticket: " + ticket.getId() + "\n" + ticket.getTitle(),
                 Alert.AlertType.INFORMATION);
     }
 
@@ -607,14 +444,15 @@ public class MainController implements Initializable {
         openTicketForm(ticket);
     }
 
-    // View Management
     private void showDashboard() {
         dashboardView.setVisible(true);
         dashboardView.setManaged(true);
         ticketsView.setVisible(false);
         ticketsView.setManaged(false);
-        toolbarContainer.setVisible(false);
-        toolbarContainer.setManaged(false);
+        if (toolbarContainer != null) {
+            toolbarContainer.setVisible(false);
+            toolbarContainer.setManaged(false);
+        }
     }
 
     private void showTicketsView() {
@@ -622,8 +460,10 @@ public class MainController implements Initializable {
         dashboardView.setManaged(false);
         ticketsView.setVisible(true);
         ticketsView.setManaged(true);
-        toolbarContainer.setVisible(true);
-        toolbarContainer.setManaged(true);
+        if (toolbarContainer != null) {
+            toolbarContainer.setVisible(true);
+            toolbarContainer.setManaged(true);
+        }
     }
 
     private void setActiveSidebarButton(Button button) {
@@ -642,7 +482,6 @@ public class MainController implements Initializable {
         alert.showAndWait();
     }
 
-    // Open Forms
     private void openTicketForm(Ticket ticket) {
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/TicketForm.fxml"));
@@ -657,20 +496,15 @@ public class MainController implements Initializable {
                 if (isEdit) {
                     ticketRepository.update(savedTicket);
                 } else {
-                    Ticket created = ticketRepository.create(savedTicket);
-                    if (created != null) {
-                        ticketList.add(0, created);
-                    }
+                    ticketRepository.create(savedTicket);
                 }
-                updateDashboardStats();
-                recentTicketsTable.refresh();
-                allTicketsTable.refresh();
+                handleRefresh();
             });
 
-            javafx.scene.Scene scene = new javafx.scene.Scene(root, 600, 500);
+            Scene scene = new Scene(root, 600, 500);
             scene.getStylesheets().add(getClass().getResource("/css/style.css").toExternalForm());
 
-            javafx.stage.Stage stage = new javafx.stage.Stage();
+            Stage stage = new Stage();
             stage.setTitle(ticket == null ? "Create New Ticket" : "Edit Ticket");
             stage.setScene(scene);
             stage.initModality(javafx.stage.Modality.APPLICATION_MODAL);
@@ -684,12 +518,12 @@ public class MainController implements Initializable {
     private void openUserManagement() {
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/UserManagement.fxml"));
-            javafx.scene.Parent root = loader.load();
+            Parent root = loader.load();
 
-            javafx.scene.Scene scene = new javafx.scene.Scene(root, 1000, 600);
+            Scene scene = new Scene(root, 1000, 600);
             scene.getStylesheets().add(getClass().getResource("/css/style.css").toExternalForm());
 
-            javafx.stage.Stage stage = new javafx.stage.Stage();
+            Stage stage = new Stage();
             stage.setTitle("User Management");
             stage.setScene(scene);
             stage.initModality(javafx.stage.Modality.APPLICATION_MODAL);
@@ -700,33 +534,15 @@ public class MainController implements Initializable {
         }
     }
 
-    @FXML
-    private void handleOpenStats() {
-        try {
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/StatsView.fxml"));
-            Parent root = loader.load();
-
-            Scene scene = new Scene(root, 1400, 900);
-            scene.getStylesheets().add(getClass().getResource("/css/style.css").toExternalForm());
-
-            Stage stage = new Stage();
-            stage.setTitle("📊 Statistics Dashboard");
-            stage.setScene(scene);
-            stage.show();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
     private void openCategoryManagement() {
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/fxml/CategoryManagement.fxml"));
-            javafx.scene.Parent root = loader.load();
+            Parent root = loader.load();
 
-            javafx.scene.Scene scene = new javafx.scene.Scene(root, 1000, 600);
+            Scene scene = new Scene(root, 1000, 600);
             scene.getStylesheets().add(getClass().getResource("/css/style.css").toExternalForm());
 
-            javafx.stage.Stage stage = new javafx.stage.Stage();
+            Stage stage = new Stage();
             stage.setTitle("Category Management");
             stage.setScene(scene);
             stage.initModality(javafx.stage.Modality.APPLICATION_MODAL);
