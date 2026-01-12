@@ -8,51 +8,85 @@ import javafx.stage.Stage;
 import org.example.model.Ticket;
 
 import java.net.URL;
+import java.util.List;
 import java.util.ResourceBundle;
+import java.util.stream.Collectors;
+
+import org.example.model.Category;
+import org.example.model.User;
+import org.example.repository.CategoryRepository;
+import org.example.repository.UserRepository;
 
 public class TicketFormController implements Initializable {
 
-    @FXML private TextField txtTitle;
-    @FXML private TextArea txtDescription;
-    @FXML private ComboBox<String> comboPriority;
-    @FXML private ComboBox<String> comboCategory;
-    @FXML private ComboBox<String> comboAssignTo;
-    @FXML private Button btnSave;
-    @FXML private Button btnCancel;
-    @FXML private Button btnAnalyzeAI;
-    @FXML private Label lblAIResult;
-    @FXML private ProgressIndicator aiProgress;
+    @FXML
+    private TextField txtTitle;
+    @FXML
+    private TextArea txtDescription;
+    @FXML
+    private ComboBox<String> comboPriority;
+    @FXML
+    private ComboBox<String> comboCategory;
+    @FXML
+    private ComboBox<String> comboAssignTo;
+    @FXML
+    private Button btnSave;
+    @FXML
+    private Button btnCancel;
+    @FXML
+    private Button btnAnalyzeAI;
+    @FXML
+    private Label lblAIResult;
+    @FXML
+    private ProgressIndicator aiProgress;
 
     private boolean isEditMode = false;
     private Ticket currentTicket;
     private TicketSaveCallback saveCallback;
 
+    private UserRepository userRepository;
+    private CategoryRepository categoryRepository;
+
     @Override
     public void initialize(URL url, ResourceBundle resourceBundle) {
+        userRepository = new UserRepository();
+        categoryRepository = new CategoryRepository();
+
         setupComboBoxes();
         lblAIResult.setVisible(false);
         aiProgress.setVisible(false);
     }
 
-    
     private void setupComboBoxes() {
         // Priority options
         comboPriority.setItems(FXCollections.observableArrayList(
-                "Low", "Medium", "High", "Critical"
-        ));
+                "Low", "Medium", "High", "Critical"));
         comboPriority.setValue("Medium");
 
-        // Category options
-        comboCategory.setItems(FXCollections.observableArrayList(
-                "Technical", "Payment", "UI/UX", "Email", "Database",
-                "Security", "Performance", "Feature", "Bug", "Other"
-        ));
-        comboCategory.setValue("Technical");
+        // Category options - Load from DB
+        List<Category> categories = categoryRepository.findAll();
+        List<String> categoryNames = categories.stream()
+                .map(Category::getName)
+                .collect(Collectors.toList());
 
-        // Assign to options
-        comboAssignTo.setItems(FXCollections.observableArrayList(
-                "Unassigned", "John Doe", "Jane Smith", "Mike Johnson", "Sarah Wilson"
-        ));
+        if (categoryNames.isEmpty()) {
+            categoryNames.add("General");
+        }
+
+        comboCategory.setItems(FXCollections.observableArrayList(categoryNames));
+        if (!categoryNames.isEmpty()) {
+            comboCategory.setValue(categoryNames.get(0));
+        }
+
+        // Assign to options - Load from DB
+        List<User> users = userRepository.findAll();
+        List<String> usernames = users.stream()
+                .map(User::getUsername)
+                .collect(Collectors.toList());
+
+        usernames.add(0, "Unassigned");
+
+        comboAssignTo.setItems(FXCollections.observableArrayList(usernames));
         comboAssignTo.setValue("Unassigned");
     }
 

@@ -20,6 +20,24 @@ public class Neo4jConnection {
 
         driver = GraphDatabase.driver(uri, AuthTokens.basic(username, password));
         System.out.println("Connected to Neo4j at " + uri);
+        initializeSchema();
+    }
+
+    private void initializeSchema() {
+        try (Session session = getSession()) {
+            // 1. Constraints (prevent duplicates)
+            session.run("CREATE CONSTRAINT ticket_id IF NOT EXISTS FOR (t:Ticket) REQUIRE t.id IS UNIQUE");
+            session.run("CREATE CONSTRAINT user_username IF NOT EXISTS FOR (u:User) REQUIRE u.username IS UNIQUE");
+            session.run("CREATE CONSTRAINT category_name IF NOT EXISTS FOR (c:Category) REQUIRE c.name IS UNIQUE");
+
+            // 2. Indexes for performance
+            session.run("CREATE INDEX ticket_status IF NOT EXISTS FOR (t:Ticket) ON (t.status)");
+            session.run("CREATE INDEX ticket_priority IF NOT EXISTS FOR (t:Ticket) ON (t.priority)");
+
+            System.out.println("✅ Database schema initialized (constraints and indexes)");
+        } catch (Exception e) {
+            System.err.println("⚠️ Could not initialize schema: " + e.getMessage());
+        }
     }
 
     public static Neo4jConnection getInstance() {
@@ -39,6 +57,7 @@ public class Neo4jConnection {
             System.out.println("Neo4j connection closed");
         }
     }
+
     public Driver getDriver() {
         return driver;
     }
