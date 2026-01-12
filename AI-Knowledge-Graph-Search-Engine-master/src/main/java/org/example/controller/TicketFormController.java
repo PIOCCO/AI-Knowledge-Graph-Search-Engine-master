@@ -14,8 +14,10 @@ import java.util.stream.Collectors;
 
 import org.example.model.Category;
 import org.example.model.User;
+import org.example.model.ClassificationResult;
 import org.example.repository.CategoryRepository;
 import org.example.repository.UserRepository;
+import org.example.service.MLClassificationService;
 
 public class TicketFormController implements Initializable {
 
@@ -46,11 +48,13 @@ public class TicketFormController implements Initializable {
 
     private UserRepository userRepository;
     private CategoryRepository categoryRepository;
+    private MLClassificationService mlService;
 
     @Override
     public void initialize(URL url, ResourceBundle resourceBundle) {
         userRepository = new UserRepository();
         categoryRepository = new CategoryRepository();
+        mlService = new MLClassificationService();
 
         setupComboBoxes();
         lblAIResult.setVisible(false);
@@ -157,6 +161,7 @@ public class TicketFormController implements Initializable {
 
     @FXML
     private void handleAnalyzeAI() {
+        String title = txtTitle.getText().trim();
         String description = txtDescription.getText().trim();
 
         if (description.isEmpty()) {
@@ -169,70 +174,37 @@ public class TicketFormController implements Initializable {
         btnAnalyzeAI.setDisable(true);
         lblAIResult.setVisible(false);
 
-        // Simulate AI analysis (replace with actual AI service call)
-        new Thread(() -> {
-            try {
-                Thread.sleep(2000); // Simulate AI processing
+        // Create temporary ticket for analysis
+        Ticket tempTicket = new Ticket();
+        tempTicket.setId("TEMP");
+        tempTicket.setTitle(title.isEmpty() ? "Untitled" : title);
+        tempTicket.setDescription(description);
+        tempTicket.setPriority(comboPriority.getValue());
 
-                // Demo AI result
-                String suggestedCategory = analyzeWithAI(description);
-                String suggestedPriority = determinePriority(description);
+        // Call real ML service
+        mlService.classifyTicketAsync(tempTicket)
+                .thenAccept(result -> {
+                    javafx.application.Platform.runLater(() -> {
+                        aiProgress.setVisible(false);
+                        btnAnalyzeAI.setDisable(false);
 
-                javafx.application.Platform.runLater(() -> {
-                    aiProgress.setVisible(false);
-                    btnAnalyzeAI.setDisable(false);
+                        if (result != null) {
+                            // Update UI with real prediction
+                            comboCategory.setValue(result.getCategoryName());
 
-                    // Set suggested values
-                    comboCategory.setValue(suggestedCategory);
-                    comboPriority.setValue(suggestedPriority);
+                            String confidenceStr = String.format("%.1f", result.getConfidence() * 100);
+                            lblAIResult.setText("🤖 AI Prediction: " + result.getCategoryName() +
+                                    " (" + confidenceStr + "% confidence)");
+                            lblAIResult.setVisible(true);
 
-                    // Show result
-                    lblAIResult.setText("✨ AI Analysis: Category: " + suggestedCategory +
-                            ", Priority: " + suggestedPriority);
-                    lblAIResult.setVisible(true);
+                            // Optional: Update priority if the ML model returned one (it doesn't currently,
+                            // but could)
+                        } else {
+                            lblAIResult.setText("⚠️ AI Service unavailable or failed.");
+                            lblAIResult.setVisible(true);
+                        }
+                    });
                 });
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        }).start();
-    }
-
-    private String analyzeWithAI(String description) {
-        // Demo AI logic - replace with actual AI API call
-        description = description.toLowerCase();
-
-        if (description.contains("login") || description.contains("password") || description.contains("auth")) {
-            return "Security";
-        } else if (description.contains("payment") || description.contains("transaction")) {
-            return "Payment";
-        } else if (description.contains("database") || description.contains("query")) {
-            return "Database";
-        } else if (description.contains("ui") || description.contains("design") || description.contains("layout")) {
-            return "UI/UX";
-        } else if (description.contains("email") || description.contains("notification")) {
-            return "Email";
-        } else if (description.contains("slow") || description.contains("performance")) {
-            return "Performance";
-        } else if (description.contains("bug") || description.contains("error")) {
-            return "Bug";
-        } else {
-            return "Technical";
-        }
-    }
-
-    private String determinePriority(String description) {
-        description = description.toLowerCase();
-
-        if (description.contains("critical") || description.contains("urgent") ||
-                description.contains("down") || description.contains("not working")) {
-            return "Critical";
-        } else if (description.contains("important") || description.contains("asap")) {
-            return "High";
-        } else if (description.contains("minor") || description.contains("enhancement")) {
-            return "Low";
-        } else {
-            return "Medium";
-        }
     }
 
     private boolean validateForm() {
