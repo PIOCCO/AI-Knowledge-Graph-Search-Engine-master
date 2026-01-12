@@ -230,8 +230,11 @@ public class TicketRepository {
         try (Session session = connection.getSession()) {
             Result result = session.run(query);
             while (result.hasNext()) {
-                Record record = result.next();
-                tickets.add(mapToTicket(record));
+                try {
+                    tickets.add(mapToTicket(result.next()));
+                } catch (Exception e) {
+                    System.err.println("⚠️ Skipping invalid ticket record: " + e.getMessage());
+                }
             }
             System.out.println("✅ Found " + tickets.size() + " tickets");
         } catch (Exception e) {
@@ -459,21 +462,43 @@ public class TicketRepository {
         var node = record.get("t").asNode();
 
         Ticket ticket = new Ticket();
-        ticket.setId(node.get("id").asString());
-        ticket.setTitle(node.get("title").asString());
+        // Safely map fields with defaults if necessary
+        ticket.setId(node.get("id").asString("UNKNOWN_ID"));
+        ticket.setTitle(node.get("title").asString("Untitled Ticket"));
         ticket.setDescription(node.get("description").asString(""));
-        ticket.setStatus(node.get("status").asString());
-        ticket.setPriority(node.get("priority").asString());
-        ticket.setCategory(node.get("category").asString());
+        ticket.setStatus(node.get("status").asString("OPEN"));
+        ticket.setPriority(node.get("priority").asString("MEDIUM"));
+        ticket.setCategory(node.get("category").asString("General"));
         ticket.setAssignedTo(node.get("assignedTo").asString(""));
         ticket.setCreatedBy(node.get("createdBy").asString(""));
 
+        // Robust date handling
         if (!node.get("createdAt").isNull()) {
-            ticket.setCreatedAt(node.get("createdAt").asLocalDateTime());
+            try {
+                // Try as LocalDateTime first (standard for this app)
+                ticket.setCreatedAt(node.get("createdAt").asLocalDateTime());
+            } catch (Exception e) {
+                // Fallback: try as String if it was stored as string
+                try {
+                    String dateStr = node.get("createdAt").asString();
+                    if (dateStr != null) {
+                        ticket.setCreatedAt(LocalDateTime.parse(dateStr));
+                    }
+                } catch (Exception ignored) {
+                    System.err.println("⚠️ Could not parse createdAt for ticket " + ticket.getId());
+                    ticket.setCreatedAt(LocalDateTime.now()); // Fallback to current time
+                }
+            }
+        } else {
+            ticket.setCreatedAt(LocalDateTime.now());
         }
 
         if (!node.get("updatedAt").isNull()) {
-            ticket.setUpdatedAt(node.get("updatedAt").asLocalDateTime());
+            try {
+                ticket.setUpdatedAt(node.get("updatedAt").asLocalDateTime());
+            } catch (Exception e) {
+                ticket.setUpdatedAt(LocalDateTime.now());
+            }
         }
 
         return ticket;
