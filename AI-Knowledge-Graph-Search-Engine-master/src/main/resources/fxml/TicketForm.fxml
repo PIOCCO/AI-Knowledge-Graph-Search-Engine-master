@@ -5,84 +5,82 @@
 <?import javafx.scene.layout.*?>
 <?import javafx.scene.text.Font?>
 
-<VBox xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
-      fx:controller="org.example.controller.TicketFormController"
-      spacing="20" style="-fx-background-color: white;">
+<ScrollPane fitToWidth="true" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="org.example.controller.TicketFormController"
+            style="-fx-background-color: #f6f8fa; -fx-background: #f6f8fa;">
 
-    <padding>
-        <Insets top="30" bottom="30" left="30" right="30"/>
-    </padding>
+    <content>
+        <VBox alignment="TOP_CENTER" style="-fx-padding: 30; -fx-background-color: #f6f8fa;">
+            <VBox maxWidth="800" spacing="25" styleClass="form-container">
 
-    <!-- Header -->
-    <HBox alignment="CENTER_LEFT" spacing="10">
-        <Label text="🎫" style="-fx-font-size: 32px;"/>
-        <VBox>
-            <Label text="Create New Ticket" style="-fx-font-size: 20px; -fx-font-weight: bold;"/>
-            <Label text="Fill in the details below" style="-fx-text-fill: #7f8c8d; -fx-font-size: 12px;"/>
-        </VBox>
-    </HBox>
+                <!-- Header -->
+                <HBox alignment="CENTER_LEFT" spacing="15" style="-fx-border-color: transparent transparent #e1e4e8 transparent; -fx-border-width: 0 0 1 0; -fx-padding: 0 0 20 0;">
+                    <Label text="🎫" style="-fx-font-size: 32px;"/>
+                    <VBox spacing="2">
+                        <Label text="Create New Ticket" style="-fx-font-size: 24px; -fx-font-weight: bold; -fx-text-fill: #24292e;"/>
+                        <Label text="Please provide the details of your request below." style="-fx-text-fill: #57606a; -fx-font-size: 14px;"/>
+                    </VBox>
+                </HBox>
 
-    <Separator/>
+                <!-- Form Fields -->
+                <VBox spacing="20">
+                    <!-- Title -->
+                    <VBox spacing="8">
+                        <Label text="Ticket Title" styleClass="form-label"/>
+                        <TextField fx:id="txtTitle" promptText="Brief summary of the issue"
+                                   styleClass="form-field"/>
+                    </VBox>
 
-    <!-- Form Fields -->
-    <VBox spacing="15" VBox.vgrow="ALWAYS">
-        <!-- Title -->
-        <VBox spacing="5">
-            <Label text="Title *" style="-fx-font-weight: bold;"/>
-            <TextField fx:id="txtTitle" promptText="Brief description of the issue"
-                       style="-fx-padding: 10px; -fx-font-size: 13px;"/>
-        </VBox>
+                    <!-- Description & AI -->
+                    <VBox spacing="8">
+                        <HBox alignment="CENTER_LEFT" spacing="10">
+                            <Label text="Description" styleClass="form-label"/>
+                            <Region HBox.hgrow="ALWAYS"/>
+                            <Button fx:id="btnAnalyzeAI" text="✨ Refine with AI"
+                                    onAction="#handleAnalyzeAI"
+                                    styleClass="ai-button"/>
+                            <ProgressIndicator fx:id="aiProgress" prefWidth="18" prefHeight="18" visible="false"/>
+                        </HBox>
 
-        <!-- Description -->
-        <VBox spacing="5" VBox.vgrow="ALWAYS">
-            <HBox alignment="CENTER_LEFT" spacing="10">
-                <Label text="Description *" style="-fx-font-weight: bold;"/>
-                <Region HBox.hgrow="ALWAYS"/>
-                <Button fx:id="btnAnalyzeAI" text="✨ Analyze with AI"
-                        onAction="#handleAnalyzeAI"
-                        style="-fx-background-color: #9b59b6; -fx-text-fill: white;
-                              -fx-padding: 6px 12px; -fx-background-radius: 5px;
-                              -fx-font-size: 11px; -fx-cursor: hand;"/>
-                <ProgressIndicator fx:id="aiProgress" prefWidth="20" prefHeight="20" visible="false"/>
-            </HBox>
-            <TextArea fx:id="txtDescription" promptText="Detailed description of the issue"
-                      prefRowCount="6" wrapText="true"
-                      style="-fx-padding: 10px; -fx-font-size: 13px;"/>
-            <Label fx:id="lblAIResult" visible="false"
-                   style="-fx-background-color: #e8f5e9; -fx-text-fill: #2e7d32;
-                          -fx-padding: 10px; -fx-background-radius: 5px; -fx-font-size: 12px;"/>
-        </VBox>
+                        <TextArea fx:id="txtDescription" promptText="Please describe the issue in detail..."
+                                  prefRowCount="8" wrapText="true"
+                                  styleClass="form-area"/>
 
-        <!-- Priority and Category -->
-        <HBox spacing="15">
-            <VBox spacing="5" HBox.hgrow="ALWAYS">
-                <Label text="Priority *" style="-fx-font-weight: bold;"/>
-                <ComboBox fx:id="comboPriority" maxWidth="Infinity"
-                          style="-fx-padding: 8px; -fx-font-size: 13px;"/>
+                        <Label fx:id="lblAIResult" visible="false" styleClass="ai-result-box"/>
+                    </VBox>
+
+                    <!-- Priority & Category Row -->
+                    <HBox spacing="20">
+                        <VBox spacing="8" HBox.hgrow="ALWAYS">
+                            <Label text="Priority" styleClass="form-label"/>
+                            <ComboBox fx:id="comboPriority" maxWidth="Infinity"
+                                      styleClass="form-field"/>
+                        </VBox>
+
+                        <VBox spacing="8" HBox.hgrow="ALWAYS">
+                            <Label text="Category" styleClass="form-label"/>
+                            <ComboBox fx:id="comboCategory" maxWidth="Infinity"
+                                      styleClass="form-field"/>
+                        </VBox>
+                    </HBox>
+
+                    <!-- Assigned To -->
+                    <VBox spacing="8">
+                        <Label text="Assign To" styleClass="form-label"/>
+                        <ComboBox fx:id="comboAssignTo" maxWidth="Infinity"
+                                  styleClass="form-field"/>
+                    </VBox>
+                </VBox>
+
+                <!-- Footer / Buttons -->
+                <HBox spacing="12" alignment="CENTER_RIGHT" style="-fx-padding: 20 0 0 0; -fx-border-color: #e1e4e8 transparent transparent transparent; -fx-border-width: 1 0 0 0;">
+                    <Button fx:id="btnCancel" text="Cancel" onAction="#handleCancel"
+                            styleClass="action-button-secondary" prefWidth="100"/>
+                    <Button fx:id="btnSave" text="Create Ticket" onAction="#handleSave"
+                            styleClass="action-button-primary" prefWidth="140"/>
+                </HBox>
+
             </VBox>
-
-            <VBox spacing="5" HBox.hgrow="ALWAYS">
-                <Label text="Category *" style="-fx-font-weight: bold;"/>
-                <ComboBox fx:id="comboCategory" maxWidth="Infinity"
-                          style="-fx-padding: 8px; -fx-font-size: 13px;"/>
-            </VBox>
-        </HBox>
-
-        <!-- Assign To -->
-        <VBox spacing="5">
-            <Label text="Assign To" style="-fx-font-weight: bold;"/>
-            <ComboBox fx:id="comboAssignTo" maxWidth="Infinity"
-                      style="-fx-padding: 8px; -fx-font-size: 13px;"/>
         </VBox>
-    </VBox>
-
-    <Separator/>
-
-    <!-- Buttons -->
-    <HBox spacing="10" alignment="CENTER_RIGHT">
-        <Button fx:id="btnCancel" text="Cancel" onAction="#handleCancel"
-                styleClass="action-button-secondary" prefWidth="120"/>
-        <Button fx:id="btnSave" text="Create Ticket" onAction="#handleSave"
-                styleClass="action-button-primary" prefWidth="120"/>
-    </HBox>
-</VBox>
+    </content>
+</ScrollPane>

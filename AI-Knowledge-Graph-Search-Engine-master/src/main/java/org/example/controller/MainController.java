@@ -16,7 +16,6 @@ import javafx.geometry.Pos;
 import org.example.model.Ticket;
 import org.example.repository.TicketRepository;
 
-
 import java.net.URL;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
@@ -26,57 +25,94 @@ import java.util.ResourceBundle;
 public class MainController implements Initializable {
 
     // Sidebar Navigation Buttons
-    @FXML private Button btnDashboard;
-    @FXML private Button btnTickets;
-    @FXML private Button btnNewTicket;
-    @FXML private Button btnCategories;
-    @FXML private Button btnUsers;
+    @FXML
+    private Button btnDashboard;
+    @FXML
+    private Button btnTickets;
+    @FXML
+    private Button btnNewTicket;
+    @FXML
+    private Button btnCategories;
+    @FXML
+    private Button btnUsers;
 
     // Header Elements
-    @FXML private Label lblPageTitle;
-    @FXML private TextField searchField;
-    @FXML private Label lblUsername;
-    @FXML private Label lblUserRole;
+    @FXML
+    private Label lblPageTitle;
+    @FXML
+    private TextField searchField;
+    @FXML
+    private Label lblUsername;
+    @FXML
+    private Label lblUserRole;
 
     // Toolbar
-    @FXML private HBox toolbarContainer;
-    @FXML private ComboBox<String> statusFilter;
-    @FXML private ComboBox<String> priorityFilter;
+    @FXML
+    private HBox toolbarContainer;
+    @FXML
+    private ComboBox<String> statusFilter;
+    @FXML
+    private ComboBox<String> priorityFilter;
 
     // Dashboard Stats
-    @FXML private Label lblTotalTickets;
-    @FXML private Label lblOpenTickets;
-    @FXML private Label lblProgressTickets;
-    @FXML private Label lblResolvedTickets;
+    @FXML
+    private Label lblTotalTickets;
+    @FXML
+    private Label lblOpenTickets;
+    @FXML
+    private Label lblProgressTickets;
+    @FXML
+    private Label lblResolvedTickets;
 
     // Views
-    @FXML private ScrollPane dashboardView;
-    @FXML private ScrollPane ticketsView;
+    @FXML
+    private ScrollPane dashboardView;
+    @FXML
+    private ScrollPane ticketsView;
 
     // Labels for counts
-    @FXML private Label recentTicketsCountLabel;
-    @FXML private Label allTicketsCountLabel;
+    @FXML
+    private Label recentTicketsCountLabel;
+    @FXML
+    private Label allTicketsCountLabel;
 
     // Recent Tickets Table
-    @FXML private TableView<Ticket> recentTicketsTable;
-    @FXML private TableColumn<Ticket, String> colTicketId;
-    @FXML private TableColumn<Ticket, String> colTitle;
-    @FXML private TableColumn<Ticket, String> colStatus;
-    @FXML private TableColumn<Ticket, String> colPriority;
-    @FXML private TableColumn<Ticket, String> colCategory;
-    @FXML private TableColumn<Ticket, String> colAssignedTo;
-    @FXML private TableColumn<Ticket, String> colCreatedAt;
+    @FXML
+    private TableView<Ticket> recentTicketsTable;
+    @FXML
+    private TableColumn<Ticket, String> colTicketId;
+    @FXML
+    private TableColumn<Ticket, String> colTitle;
+    @FXML
+    private TableColumn<Ticket, String> colStatus;
+    @FXML
+    private TableColumn<Ticket, String> colPriority;
+    @FXML
+    private TableColumn<Ticket, String> colCategory;
+    @FXML
+    private TableColumn<Ticket, String> colAssignedTo;
+    @FXML
+    private TableColumn<Ticket, String> colCreatedAt;
 
     // All Tickets Table
-    @FXML private TableView<Ticket> allTicketsTable;
-    @FXML private TableColumn<Ticket, String> colAllTicketId;
-    @FXML private TableColumn<Ticket, String> colAllTitle;
-    @FXML private TableColumn<Ticket, String> colAllStatus;
-    @FXML private TableColumn<Ticket, String> colAllPriority;
-    @FXML private TableColumn<Ticket, String> colAllCategory;
-    @FXML private TableColumn<Ticket, String> colAllAssignedTo;
-    @FXML private TableColumn<Ticket, String> colAllCreatedAt;
-    @FXML private TableColumn<Ticket, Void> colAllActions;
+    @FXML
+    private TableView<Ticket> allTicketsTable;
+    @FXML
+    private TableColumn<Ticket, String> colAllTicketId;
+    @FXML
+    private TableColumn<Ticket, String> colAllTitle;
+    @FXML
+    private TableColumn<Ticket, String> colAllStatus;
+    @FXML
+    private TableColumn<Ticket, String> colAllPriority;
+    @FXML
+    private TableColumn<Ticket, String> colAllCategory;
+    @FXML
+    private TableColumn<Ticket, String> colAllAssignedTo;
+    @FXML
+    private TableColumn<Ticket, String> colAllCreatedAt;
+    @FXML
+    private TableColumn<Ticket, Void> colAllActions;
 
     private Button activeSidebarButton;
     private ObservableList<Ticket> ticketList;
@@ -112,15 +148,13 @@ public class MainController implements Initializable {
     private void setupFilters() {
         if (statusFilter != null) {
             statusFilter.setItems(FXCollections.observableArrayList(
-                    "Status: All", "New", "Open", "In Progress", "Resolved", "Closed"
-            ));
+                    "Status: All", "New", "Open", "In Progress", "Resolved", "Closed"));
             statusFilter.setValue("Status: All");
         }
 
         if (priorityFilter != null) {
             priorityFilter.setItems(FXCollections.observableArrayList(
-                    "Severity: All", "Low", "Normal", "High", "Critical"
-            ));
+                    "Severity: All", "Low", "Normal", "High", "Critical"));
             priorityFilter.setValue("Severity: All");
         }
     }
@@ -148,8 +182,7 @@ public class MainController implements Initializable {
         colCreatedAt.setCellValueFactory(cellData -> {
             long days = ChronoUnit.DAYS.between(
                     cellData.getValue().getCreatedAt(),
-                    LocalDateTime.now()
-            );
+                    LocalDateTime.now());
             return new javafx.beans.property.SimpleStringProperty(days + "d");
         });
 
@@ -183,8 +216,7 @@ public class MainController implements Initializable {
         colAllCreatedAt.setCellValueFactory(cellData -> {
             long days = ChronoUnit.DAYS.between(
                     cellData.getValue().getCreatedAt(),
-                    LocalDateTime.now()
-            );
+                    LocalDateTime.now());
             return new javafx.beans.property.SimpleStringProperty(days + "d");
         });
 
@@ -198,10 +230,18 @@ public class MainController implements Initializable {
         colAllActions.setCellFactory(col -> new TableCell<>() {
             private final Button viewBtn = new Button("👁️");
             private final Button editBtn = new Button("✏️");
+            private final Button deleteBtn = new Button("🗑️");
 
             {
-                viewBtn.setStyle("-fx-background-color: transparent; -fx-cursor: hand;");
-                editBtn.setStyle("-fx-background-color: transparent; -fx-cursor: hand;");
+                // Apply Styles
+                viewBtn.getStyleClass().addAll("btn-action", "btn-action-view");
+                editBtn.getStyleClass().addAll("btn-action", "btn-action-edit");
+                deleteBtn.getStyleClass().addAll("btn-action", "btn-action-delete");
+
+                // Add Tooltips
+                viewBtn.setTooltip(new Tooltip("View Details"));
+                editBtn.setTooltip(new Tooltip("Edit Ticket"));
+                deleteBtn.setTooltip(new Tooltip("Delete Ticket"));
 
                 viewBtn.setOnAction(e -> {
                     Ticket ticket = getTableView().getItems().get(getIndex());
@@ -212,6 +252,11 @@ public class MainController implements Initializable {
                     Ticket ticket = getTableView().getItems().get(getIndex());
                     handleEditTicket(ticket);
                 });
+
+                deleteBtn.setOnAction(e -> {
+                    Ticket ticket = getTableView().getItems().get(getIndex());
+                    handleDeleteTicket(ticket);
+                });
             }
 
             @Override
@@ -220,7 +265,7 @@ public class MainController implements Initializable {
                 if (empty) {
                     setGraphic(null);
                 } else {
-                    HBox box = new HBox(8, viewBtn, editBtn);
+                    HBox box = new HBox(8, viewBtn, editBtn, deleteBtn);
                     box.setAlignment(Pos.CENTER);
                     setGraphic(box);
                 }
@@ -434,7 +479,6 @@ public class MainController implements Initializable {
         }
     }
 
-
     private void handleViewTicket(Ticket ticket) {
         showAlert("View Ticket", "Ticket: " + ticket.getId() + "\n" + ticket.getTitle(),
                 Alert.AlertType.INFORMATION);
@@ -442,6 +486,20 @@ public class MainController implements Initializable {
 
     private void handleEditTicket(Ticket ticket) {
         openTicketForm(ticket);
+    }
+
+    private void handleDeleteTicket(Ticket ticket) {
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+        alert.setTitle("Delete Ticket");
+        alert.setHeaderText("Delete Ticket " + ticket.getId() + "?");
+        alert.setContentText("Are you sure you want to delete this ticket? This action cannot be undone.");
+
+        alert.showAndWait().ifPresent(response -> {
+            if (response == ButtonType.OK) {
+                ticketRepository.delete(ticket.getId());
+                handleRefresh();
+            }
+        });
     }
 
     private void showDashboard() {

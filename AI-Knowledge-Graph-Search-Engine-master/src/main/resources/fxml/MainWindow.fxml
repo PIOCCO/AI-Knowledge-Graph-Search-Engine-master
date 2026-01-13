@@ -206,7 +206,7 @@
                                         <TableColumn fx:id="colAllCategory" text="Type" prefWidth="120"/>
                                         <TableColumn fx:id="colAllAssignedTo" text="Group" prefWidth="150"/>
                                         <TableColumn fx:id="colAllCreatedAt" text="Days" prefWidth="80"/>
-                                        <TableColumn fx:id="colAllActions" text="Actions" prefWidth="80"/>
+                                        <TableColumn fx:id="colAllActions" text="Actions" prefWidth="140"/>
                                     </columns>
                                     <columnResizePolicy>
                                         <TableView fx:constant="CONSTRAINED_RESIZE_POLICY"/>
