@@ -5,7 +5,9 @@ import org.neo4j.driver.*;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import org.neo4j.driver.Record;
 
@@ -475,18 +477,29 @@ public class TicketRepository {
         // Robust date handling
         if (!node.get("createdAt").isNull()) {
             try {
-                // Try as LocalDateTime first (standard for this app)
-                ticket.setCreatedAt(node.get("createdAt").asLocalDateTime());
-            } catch (Exception e) {
-                // Fallback: try as String if it was stored as string
+                // 1. Try native ZonedDateTime (best for Neo4j datetime())
+                ticket.setCreatedAt(node.get("createdAt").asZonedDateTime().toLocalDateTime());
+            } catch (Exception e1) {
                 try {
-                    String dateStr = node.get("createdAt").asString();
-                    if (dateStr != null) {
-                        ticket.setCreatedAt(LocalDateTime.parse(dateStr));
+                    // 2. Try LocalDateTime (if stored as localdatetime())
+                    ticket.setCreatedAt(node.get("createdAt").asLocalDateTime());
+                } catch (Exception e2) {
+                    try {
+                        // 3. Try parsing string representation
+                        String dateStr = node.get("createdAt").asString();
+                        // Remove quotes if present
+                        dateStr = dateStr.replace("\"", "");
+                        // Handle Z suffix manually if LocalDateTime.parse fails
+                        if (dateStr.endsWith("Z")) {
+                            ticket.setCreatedAt(java.time.ZonedDateTime.parse(dateStr).toLocalDateTime());
+                        } else {
+                            ticket.setCreatedAt(LocalDateTime.parse(dateStr));
+                        }
+                    } catch (Exception e3) {
+                        System.err.println("⚠️ Could not parse createdAt for ticket " + ticket.getId() + ": "
+                                + node.get("createdAt"));
+                        ticket.setCreatedAt(LocalDateTime.now());
                     }
-                } catch (Exception ignored) {
-                    System.err.println("⚠️ Could not parse createdAt for ticket " + ticket.getId());
-                    ticket.setCreatedAt(LocalDateTime.now()); // Fallback to current time
                 }
             }
         } else {
@@ -502,6 +515,136 @@ public class TicketRepository {
         }
 
         return ticket;
+    }
+
+    /**
+     * Search tickets with filters
+     */
+    public List<Ticket> searchTickets(String keyword, String status, String priority, String assigneeId) {
+        StringBuilder query = new StringBuilder("MATCH (t:Ticket) WHERE 1=1 ");
+        Map<String, Object> params = new HashMap<>();
+
+        if (keyword != null && !keyword.trim().isEmpty()) {
+            query.append(
+                    "AND (toLower(t.title) CONTAINS toLower($keyword) OR toLower(t.description) CONTAINS toLower($keyword)) ");
+            params.put("keyword", keyword.trim());
+        }
+
+        if (status != null && !status.isEmpty() && !"All".equalsIgnoreCase(status)
+                && !"Status: All".equalsIgnoreCase(status)) {
+            query.append("AND toLower(t.status) = toLower($status) ");
+            params.put("status", status);
+        }
+
+        if (priority != null && !priority.isEmpty() && !"All".equalsIgnoreCase(priority)
+                && !"Severity: All".equalsIgnoreCase(priority)) {
+            query.append("AND toLower(t.priority) = toLower($priority) ");
+            params.put("priority", priority);
+        }
+
+        if (assigneeId != null && !assigneeId.isEmpty()) {
+            // Check both property and relationship for robustness, case-insensitive
+            query.append(
+                    "AND (toLower(t.assignedTo) = toLower($assigneeId) OR EXISTS { MATCH (t)-[:ASSIGNED_TO]->(u:User) WHERE toLower(u.username) = toLower($assigneeId) }) ");
+            params.put("assigneeId", assigneeId);
+        }
+
+        query.append("RETURN t ORDER BY t.createdAt DESC");
+
+        List<Ticket> tickets = new ArrayList<>();
+        try (Session session = connection.getSession()) {
+            System.out.println("🔍 Executing Query: " + query.toString());
+            System.out.println("🔍 Params: " + params);
+
+            Result result = session.run(query.toString(), params);
+            while (result.hasNext()) {
+                Ticket t = mapToTicket(result.next());
+                tickets.add(t);
+                // System.out.println(" > Found ticket: " + t.getId() + " assigned to: " +
+                // t.getAssignedTo());
+            }
+            System.out.println("✅ Search found " + tickets.size() + " tickets");
+
+            if (tickets.isEmpty() && assigneeId != null) {
+                // Debug: Check why we didn't find anything for this user
+                System.out.println("⚠️ Debug: Checking available assignees in DB...");
+                Result check = session.run("MATCH (t:Ticket) RETURN DISTINCT t.assignedTo as assignee LIMIT 10");
+                while (check.hasNext()) {
+                    System.out.println("   - DB has assignee: '" + check.next().get("assignee").asString() + "'");
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("❌ Error searching tickets: " + e.getMessage());
+            e.printStackTrace();
+        }
+
+        return tickets;
+    }
+
+    /**
+     * Get ticket count by category
+     */
+    public Map<String, Long> getTicketsByCategory() {
+        String query = "MATCH (t:Ticket) RETURN t.category as category, count(t) as count ORDER BY count DESC";
+        Map<String, Long> stats = new HashMap<>();
+
+        try (Session session = connection.getSession()) {
+            Result result = session.run(query);
+            while (result.hasNext()) {
+                Record record = result.next();
+                String category = record.get("category").asString("Unknown");
+                long count = record.get("count").asLong();
+                stats.put(category, count);
+            }
+        } catch (Exception e) {
+            System.err.println("❌ Error fetching category stats: " + e.getMessage());
+        }
+        return stats;
+    }
+
+    /**
+     * Get ticket count by status
+     */
+    public Map<String, Long> getTicketsByStatus() {
+        String query = "MATCH (t:Ticket) RETURN t.status as status, count(t) as count";
+        Map<String, Long> stats = new HashMap<>();
+
+        try (Session session = connection.getSession()) {
+            Result result = session.run(query);
+            while (result.hasNext()) {
+                Record record = result.next();
+                String status = record.get("status").asString("Unknown");
+                long count = record.get("count").asLong();
+                stats.put(status, count);
+            }
+        } catch (Exception e) {
+            System.err.println("❌ Error fetching status stats: " + e.getMessage());
+        }
+        return stats;
+    }
+
+    /**
+     * Get tickets created over the last 30 days
+     */
+    public Map<String, Long> getTicketsTrend() {
+        String query = """
+                MATCH (t:Ticket)
+                WHERE t.createdAt >= datetime() - duration({days: 30})
+                RETURN substring(toString(t.createdAt), 0, 10) as date, count(t) as count
+                ORDER BY date
+                """;
+        Map<String, Long> stats = new HashMap<>();
+
+        try (Session session = connection.getSession()) {
+            Result result = session.run(query);
+            while (result.hasNext()) {
+                Record record = result.next();
+                stats.put(record.get("date").asString(), record.get("count").asLong());
+            }
+        } catch (Exception e) {
+            System.err.println("❌ Error fetching trend stats: " + e.getMessage());
+        }
+        return stats;
     }
 
     /**

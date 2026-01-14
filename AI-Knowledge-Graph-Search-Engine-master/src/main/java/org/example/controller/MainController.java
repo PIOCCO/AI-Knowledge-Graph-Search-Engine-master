@@ -27,6 +27,11 @@ public class MainController implements Initializable {
     // Sidebar Navigation Buttons
     @FXML
     private Button btnDashboard;
+    private boolean isMyTicketsView = false;
+    private final String CURRENT_USER_USERNAME = "admin"; // Hardcoded for demo
+    private Button activeSidebarButton;
+    private ObservableList<Ticket> ticketList;
+    private TicketRepository ticketRepository;
     @FXML
     private Button btnTickets;
     @FXML
@@ -114,10 +119,6 @@ public class MainController implements Initializable {
     @FXML
     private TableColumn<Ticket, Void> colAllActions;
 
-    private Button activeSidebarButton;
-    private ObservableList<Ticket> ticketList;
-    private TicketRepository ticketRepository;
-
     @Override
     public void initialize(URL url, ResourceBundle resourceBundle) {
         ticketRepository = new TicketRepository();
@@ -131,43 +132,71 @@ public class MainController implements Initializable {
 
         // Setup components
         setupFilters();
-        loadTicketsFromDatabase();
+        // Don't load immediately here, wait for view selection or load dashboard data
         setupRecentTicketsTable();
         setupAllTicketsTable();
-        updateDashboardStats();
 
-        // Show dashboard by default
-        showDashboard();
+        // Initial data load
+        refreshData();
 
-        System.out.println("✅ MainController initialized with " + ticketList.size() + " tickets");
-        System.out.println("Loaded tickets: " + ticketList.size());
-        ticketList.forEach(t -> System.out.println(t.getId() + " - " + t.getTitle()));
-
+        System.out.println("✅ MainController initialized");
     }
 
     private void setupFilters() {
         if (statusFilter != null) {
             statusFilter.setItems(FXCollections.observableArrayList(
-                    "Status: All", "New", "Open", "In Progress", "Resolved", "Closed"));
+                    "Status: All", "OPEN", "IN_PROGRESS", "RESOLVED", "CLOSED"));
             statusFilter.setValue("Status: All");
+            statusFilter.setOnAction(e -> handleSearch());
         }
 
         if (priorityFilter != null) {
             priorityFilter.setItems(FXCollections.observableArrayList(
-                    "Severity: All", "Low", "Normal", "High", "Critical"));
+                    "Severity: All", "LOW", "MEDIUM", "HIGH", "CRITICAL"));
             priorityFilter.setValue("Severity: All");
+            priorityFilter.setOnAction(e -> handleSearch());
         }
     }
 
-    private void loadTicketsFromDatabase() {
-        try {
-            List<Ticket> tickets = ticketRepository.findAll();
-            ticketList = FXCollections.observableArrayList(tickets);
-            System.out.println("✅ Loaded " + tickets.size() + " tickets from Neo4j");
-        } catch (Exception e) {
-            System.err.println("❌ Error loading tickets: " + e.getMessage());
-            e.printStackTrace();
-            ticketList = FXCollections.observableArrayList();
+    private void refreshData() {
+        // 1. Get Filters
+        String keyword = searchField.getText();
+        String status = statusFilter.getValue();
+        String priority = priorityFilter.getValue();
+
+        // Clean up filter values
+        if (status != null && status.startsWith("Status: "))
+            status = status.replace("Status: ", "");
+        if (priority != null && priority.startsWith("Severity: "))
+            priority = priority.replace("Severity: ", "");
+
+        // 2. Determine Scope
+        String assignee = isMyTicketsView ? CURRENT_USER_USERNAME : null;
+
+        System.out.println("🔄 Refreshing with: Keyword='" + keyword + "', Status='" + status +
+                "', Priority='" + priority + "', Assignee='" + assignee + "'");
+
+        // 3. Fetch Data
+        List<Ticket> tickets = ticketRepository.searchTickets(keyword, status, priority, assignee);
+        ticketList = FXCollections.observableArrayList(tickets);
+
+        // 4. Update UI
+        updateTables();
+        updateDashboardStats();
+    }
+
+    private void updateTables() {
+        if (recentTicketsTable != null) {
+            int recentCount = Math.min(10, ticketList.size());
+            recentTicketsTable.setItems(FXCollections.observableArrayList(ticketList.subList(0, recentCount)));
+            if (recentTicketsCountLabel != null)
+                recentTicketsCountLabel.setText(recentCount + " Recent Tickets");
+        }
+
+        if (allTicketsTable != null) {
+            allTicketsTable.setItems(ticketList);
+            if (allTicketsCountLabel != null)
+                allTicketsCountLabel.setText(ticketList.size() + " Total Tickets");
         }
     }
 
@@ -192,13 +221,11 @@ public class MainController implements Initializable {
         colCategory.setCellFactory(col -> createCategoryCell());
         colAssignedTo.setCellFactory(col -> createAssignedCell());
 
-        // Load recent tickets (last 10)
-        int recentCount = Math.min(10, ticketList.size());
-        List<Ticket> recentTickets = ticketList.subList(0, recentCount);
-        recentTicketsTable.setItems(FXCollections.observableArrayList(recentTickets));
+        // Initialize with empty list (handled by updateTables)
+        recentTicketsTable.setItems(FXCollections.observableArrayList());
 
         if (recentTicketsCountLabel != null) {
-            recentTicketsCountLabel.setText(recentCount + " Recent Tickets");
+            recentTicketsCountLabel.setText("0 Recent Tickets");
         }
 
         // Enable table scrolling
@@ -272,11 +299,11 @@ public class MainController implements Initializable {
             }
         });
 
-        // Load all tickets
-        allTicketsTable.setItems(ticketList);
+        // Initialize with empty list (handled by updateTables)
+        allTicketsTable.setItems(FXCollections.observableArrayList());
 
         if (allTicketsCountLabel != null) {
-            allTicketsCountLabel.setText(ticketList.size() + " Total Tickets");
+            allTicketsCountLabel.setText("0 Total Tickets");
         }
 
         // Enable table scrolling
@@ -390,12 +417,26 @@ public class MainController implements Initializable {
     private void handleTickets() {
         setActiveSidebarButton(btnTickets);
         lblPageTitle.setText("My Tickets");
+        isMyTicketsView = true;
+
+        // Reset filters for a fresh view or keep them?
+        // Let's keep them but refresh data
+        refreshData();
+
         showTicketsView();
     }
 
     @FXML
     private void handleAllTickets() {
+        // Since we don't have a button for this in the sidebar declaration in
+        // controller (just generic logic),
+        // we might need to highlight one. Assuming the user clicked the button.
+        // But activeSidebarButton is not passed here.
+        // Usually you'd have @FXML Button btnAllTickets;
+
         lblPageTitle.setText("All Tickets");
+        isMyTicketsView = false;
+        refreshData();
         showTicketsView();
     }
 
@@ -420,8 +461,31 @@ public class MainController implements Initializable {
 
     @FXML
     private void handleReports() {
-        lblPageTitle.setText("Reports");
-        showAlert("Reports", "Reports view coming soon", Alert.AlertType.INFORMATION);
+        try {
+            URL resourceUrl = getClass().getResource("/fxml/ReportsView.fxml");
+            if (resourceUrl == null) {
+                System.err.println("❌ Critical Error: Could not find resource /fxml/ReportsView.fxml");
+                showAlert("Configuration Error",
+                        "Could not locate ReportsView.fxml. Please ensure the project is fully rebuilt.",
+                        Alert.AlertType.ERROR);
+                return;
+            }
+
+            FXMLLoader loader = new FXMLLoader(resourceUrl);
+            Parent root = loader.load();
+
+            Scene scene = new Scene(root, 1000, 800);
+            scene.getStylesheets().add(getClass().getResource("/css/style.css").toExternalForm());
+
+            Stage stage = new Stage();
+            stage.setTitle("📊 Reports & Analytics");
+            stage.setScene(scene);
+            stage.initModality(javafx.stage.Modality.NONE);
+            stage.show();
+        } catch (Exception e) {
+            e.printStackTrace();
+            showAlert("Error", "Failed to open reports: " + e.getMessage(), Alert.AlertType.ERROR);
+        }
     }
 
     @FXML
@@ -443,20 +507,12 @@ public class MainController implements Initializable {
 
     @FXML
     private void handleSearch() {
-        String query = searchField.getText();
-        if (!query.isEmpty()) {
-            System.out.println("🔍 Searching for: " + query);
-            // Implement search logic here
-        }
+        refreshData();
     }
 
     @FXML
     private void handleRefresh() {
-        System.out.println("🔄 Refreshing data...");
-        loadTicketsFromDatabase();
-        setupRecentTicketsTable();
-        setupAllTicketsTable();
-        updateDashboardStats();
+        refreshData();
         showAlert("Refreshed", "Data refreshed successfully", Alert.AlertType.INFORMATION);
     }
 
